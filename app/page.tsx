@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import BulkActionModal, { BulkUpdateData } from '@/components/BulkActionModal';
 import {
   AlertTriangle,
   Building2,
@@ -26,7 +27,7 @@ import {
   X,
 } from 'lucide-react';
 
-// ディレクター用ロック解除用パスワード（※お好みの暗証番号に変更可能です）
+// ディレクター用ロック解除用パスワード
 const DIRECTOR_PASSWORD = '0531';
 
 // =====================================================================
@@ -355,12 +356,16 @@ function Toast({ message }: { message: string | null }) {
 
 function ProjectCard({
   project,
+  isSelected,
+  onToggleSelect,
   onStatusChange,
   onCopyLink,
   onEdit,
   onDelete,
 }: {
   project: Project;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
   onCopyLink: (url: string, label: string) => void;
   onEdit: (project: Project) => void;
@@ -380,8 +385,8 @@ function ProjectCard({
   return (
     <div
       className={`group relative rounded-lg border bg-neutral-900 p-3.5 shadow-sm transition-colors hover:border-neutral-600 ${
-        hasAlert ? 'border-rose-800/60' : 'border-neutral-800'
-      }`}
+        isSelected ? 'ring-2 ring-amber-500 border-amber-500/50' : ''
+      } ${hasAlert ? 'border-rose-800/60' : 'border-neutral-800'}`}
     >
       {project.priority > 0 && (
         <div
@@ -392,9 +397,17 @@ function ProjectCard({
       )}
 
       <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-neutral-400">{project.clientName}</p>
-          <h3 className="truncate text-sm font-semibold text-neutral-100">{project.title}</h3>
+        <div className="flex items-start gap-2 min-w-0">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(project.id)}
+            className="mt-0.5 h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+          />
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-neutral-400">{project.clientName}</p>
+            <h3 className="truncate text-sm font-semibold text-neutral-100">{project.title}</h3>
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {hasAlert && <AlertTriangle className="h-4 w-4 text-rose-400" />}
@@ -685,12 +698,16 @@ function DirectorPanel({
 
 function KanbanBoard({
   projects,
+  selectedIds,
+  onToggleSelect,
   onStatusChange,
   onCopyLink,
   onEdit,
   onDelete,
 }: {
   projects: Project[];
+  selectedIds: string[];
+  onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
   onCopyLink: (url: string, label: string) => void;
   onEdit: (project: Project) => void;
@@ -730,6 +747,8 @@ function KanbanBoard({
                   <ProjectCard
                     key={project.id}
                     project={project}
+                    isSelected={selectedIds.includes(project.id)}
+                    onToggleSelect={onToggleSelect}
                     onStatusChange={onStatusChange}
                     onCopyLink={onCopyLink}
                     onEdit={onEdit}
@@ -1094,12 +1113,13 @@ function ProjectFormModal({
 }
 
 // =====================================================================
-// メインコンポーネント（Supabase & LINE 連動 + パスワード保護付きビュー切替）
+// メインコンポーネント
 // =====================================================================
 export default function VideoProgressApp() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]); // 選択中のID保持
   const [loading, setLoading] = useState<boolean>(true);
-  const [viewMode, setViewMode] = useState<ViewMode>('editor'); // デフォルトは編集者モード
+  const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [isDirectorUnlocked, setIsDirectorUnlocked] = useState<boolean>(false);
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
   const [inputPassword, setInputPassword] = useState<string>('');
@@ -1143,7 +1163,78 @@ export default function VideoProgressApp() {
     window.setTimeout(() => setToastMessage(null), 2000);
   }
 
-  // ディレクター用モード切替＆パスワード認証制御
+  // 選択のトグル処理
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  // 一括変更の実行処理
+  const handleApplyBulkUpdate = async (updates: BulkUpdateData) => {
+    const dbUpdates: Record<string, any> = {};
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.editor) {
+      dbUpdates.main_editor = updates.editor;
+      dbUpdates.assignee = updates.editor;
+    }
+    if (updates.director) dbUpdates.director = updates.director;
+    if (updates.internalDeadline) dbUpdates.internal_due_date = updates.internalDeadline;
+    if (updates.firstDraftDate) {
+      dbUpdates.draft_due_date = updates.firstDraftDate;
+      dbUpdates.due_date = updates.firstDraftDate;
+    }
+    if (updates.clientDeadline) dbUpdates.client_submitted_date = updates.clientDeadline;
+
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .update(dbUpdates)
+        .in('id', selectedIds);
+
+      if (error) throw error;
+
+      // LINE一括通知の呼び出し
+      const updatedTitles = projects
+        .filter((p) => selectedIds.includes(p.id))
+        .map((p) => p.title);
+
+      await fetch('/api/line-bulk-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemsCount: selectedIds.length,
+          updatedFields: updates,
+          itemTitles: updatedTitles,
+        }),
+      });
+
+      showToast(`${selectedIds.length}件の案件を一括更新しました`);
+      fetchProjects();
+      setSelectedIds([]);
+    } catch (err: any) {
+      alert('一括更新に失敗しました: ' + err.message);
+    }
+  };
+
+  // 一括削除の実行処理
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .delete()
+        .in('id', selectedIds);
+
+      if (error) throw error;
+
+      showToast(`${selectedIds.length}件の案件を一括削除しました`);
+      fetchProjects();
+      setSelectedIds([]);
+    } catch (err: any) {
+      alert('一括削除に失敗しました: ' + err.message);
+    }
+  };
+
   const handleSelectDirectorView = () => {
     if (isDirectorUnlocked) {
       setViewMode('director');
@@ -1407,7 +1498,7 @@ export default function VideoProgressApp() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 font-sans pb-20">
       {/* ヘッダー */}
       <header className="sticky top-0 z-30 border-b border-neutral-800 bg-neutral-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-6 py-3.5">
@@ -1419,7 +1510,6 @@ export default function VideoProgressApp() {
             </div>
           </div>
 
-          {/* ディレクター / 編集者 画面切り替えタブ（鍵アイコン付き） */}
           <div className="flex items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1">
             <button
               type="button"
@@ -1451,7 +1541,7 @@ export default function VideoProgressApp() {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5">
-        {/* 全体統計（サマリーカード） */}
+        {/* 全体統計 */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryCard label="進行中の案件" value={summary.activeCount} tone="default" />
           <SummaryCard
@@ -1468,7 +1558,7 @@ export default function VideoProgressApp() {
           <SummaryCard label="修正対応中" value={summary.revisionCount} tone="default" />
         </div>
 
-        {/* ディレクター管理パネル（認証成功＆ディレクターモード時のみ表示） */}
+        {/* ディレクター管理パネル */}
         {viewMode === 'director' && isDirectorUnlocked && (
           <DirectorPanel editorWorkload={editorWorkload} clientProgress={clientProgress} />
         )}
@@ -1484,6 +1574,8 @@ export default function VideoProgressApp() {
           />
           <KanbanBoard
             projects={filteredProjects}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
             onStatusChange={handleStatusChange}
             onCopyLink={handleCopyLink}
             onEdit={handleOpenEditModal}
@@ -1491,6 +1583,16 @@ export default function VideoProgressApp() {
           />
         </div>
       </main>
+
+      {/* 一括操作バー ＆ モーダル */}
+      <BulkActionModal
+        selectedCount={selectedIds.length}
+        onClearSelection={() => setSelectedIds([])}
+        onApplyBulkUpdate={handleApplyBulkUpdate}
+        onBulkDelete={handleBulkDelete}
+        editorsList={editorNames}
+        directorsList={['望月']}
+      />
 
       {/* パスワード入力モーダル */}
       {showPasswordModal && (
@@ -1509,7 +1611,7 @@ export default function VideoProgressApp() {
                   type="password"
                   value={inputPassword}
                   onChange={(e) => setInputPassword(e.target.value)}
-                  placeholder="パスワードを入力 (初期: 1234)"
+                  placeholder="パスワードを入力"
                   autoFocus
                   className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-amber-500 focus:outline-none"
                 />
