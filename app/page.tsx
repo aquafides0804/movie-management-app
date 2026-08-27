@@ -226,17 +226,21 @@ function isGigafileExpiring(dateStr: string | null): boolean {
   return days !== null && days <= 1;
 }
 
+// 案件のアラート判定（作業中のフェーズのみ期日超過を警告）
 function projectHasAlert(p: Project): boolean {
   const internalDue = getDueBadge(p.internalDueDate);
   const draftDue = getDueBadge(p.draftDueDate);
   const gigafileAlert = p.links.some(
     (l) => l.linkType === 'gigafile' && isGigafileExpiring(l.expiresAt)
   );
-  return (
-    internalDue.level === 'overdue' ||
-    (draftDue.level === 'overdue' && !p.draftSubmittedDate) ||
-    gigafileAlert
-  );
+
+  // 初稿提出後・作業完了後のステータスでは締め切り日超過の警告を出さない
+  const isWorkInPhase = p.status === 'not_started' || p.status === 'editing';
+
+  const internalOverdue = isWorkInPhase && internalDue.level === 'overdue';
+  const draftOverdue = isWorkInPhase && draftDue.level === 'overdue' && !p.draftSubmittedDate;
+
+  return internalOverdue || draftOverdue || gigafileAlert;
 }
 
 function emptyFormData(): ProjectFormData {
@@ -389,6 +393,9 @@ function ProjectCard({
   const draftDue = getDueBadge(project.draftDueDate);
   const draftDone = !!project.draftSubmittedDate;
 
+  // 編集・未着手以外のフェーズでは締め切り日アラートを非表示にする
+  const isWorkInPhase = project.status === 'not_started' || project.status === 'editing';
+
   const hasGigafileAlert = project.links.some(
     (l) => l.linkType === 'gigafile' && isGigafileExpiring(l.expiresAt)
   );
@@ -487,13 +494,14 @@ function ProjectCard({
       </div>
 
       <div className="mb-3 space-y-1.5">
-        <DueRow icon={<Clock className="h-3.5 w-3.5" />} label="内部期日" dateStr={project.internalDueDate} badge={internalDue} />
+        <DueRow icon={<Clock className="h-3.5 w-3.5" />} label="締め切り日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} />
         <DueRow
           icon={<Calendar className="h-3.5 w-3.5" />}
           label="初稿提出期日"
           dateStr={project.draftDueDate}
           badge={draftDue}
           done={draftDone}
+          suppressAlert={!isWorkInPhase}
         />
         <PlainDateRow label="先方提出日(CL)" dateStr={project.clientSubmittedDate} />
         <PlainDateRow label="修正完了日" dateStr={project.revisionCompletedDate} />
@@ -553,20 +561,24 @@ function DueRow({
   dateStr,
   badge,
   done,
+  suppressAlert = false,
 }: {
   icon: React.ReactNode;
   label: string;
   dateStr: string | null;
   badge: { label: string; level: 'overdue' | 'soon' | 'normal' | 'none' };
   done?: boolean;
+  suppressAlert?: boolean;
 }) {
-  const level = done ? 'normal' : badge.level;
+  const level = (done || suppressAlert) ? 'normal' : badge.level;
   const levelStyle = {
-    overdue: 'text-rose-400',
-    soon: 'text-amber-400',
+    overdue: 'text-rose-400 font-bold',
+    soon: 'text-amber-400 font-semibold',
     normal: 'text-neutral-400',
     none: 'text-neutral-600',
   }[level];
+
+  const displayBadgeText = done ? '提出済み' : (suppressAlert && badge.level === 'overdue') ? '経過' : badge.label;
 
   return (
     <div className="flex items-center justify-between text-[11px]">
@@ -575,7 +587,7 @@ function DueRow({
         {label}
         <span className="text-neutral-400">{formatDateShort(dateStr)}</span>
       </span>
-      <span className={`font-medium ${levelStyle}`}>{done ? '提出済み' : badge.label}</span>
+      <span className={`font-medium ${levelStyle}`}>{displayBadgeText}</span>
     </div>
   );
 }
@@ -591,7 +603,6 @@ function PlainDateRow({ label, dateStr }: { label: string; dateStr: string | nul
   );
 }
 
-// クライアント別専用テーブルビュー（新規コンポーネント）
 function ClientTableView({
   projects,
   clientNames,
@@ -622,7 +633,6 @@ function ClientTableView({
 
   return (
     <div className="space-y-4">
-      {/* クライアント選択タブ ＆ サマリー */}
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -659,7 +669,6 @@ function ClientTableView({
           </div>
         </div>
 
-        {/* 進捗プログレスバー */}
         <div className="space-y-1">
           <div className="flex justify-between text-[11px] text-neutral-400">
             <span>納品完了率</span>
@@ -674,7 +683,6 @@ function ClientTableView({
         </div>
       </div>
 
-      {/* 案件一覧テーブル */}
       <div className="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900 shadow">
         <table className="w-full text-left text-xs">
           <thead className="border-b border-neutral-800 bg-neutral-950/80 text-neutral-400 uppercase tracking-wider">
@@ -1207,7 +1215,7 @@ function ProjectFormModal({
             </p>
             <div className="grid grid-cols-2 gap-3">
               <DateField
-                label="内部期日"
+                label="締め切り日"
                 value={form.internalDueDate}
                 onChange={(v) => update('internalDueDate', v)}
                 accent
@@ -1678,11 +1686,7 @@ export default function VideoProgressApp() {
   }, [projects, filters]);
 
   const summary = useMemo(() => {
-    const overdueCount = filteredProjects.filter((p) => {
-      const internalDue = getDueBadge(p.internalDueDate);
-      const draftDue = getDueBadge(p.draftDueDate);
-      return internalDue.level === 'overdue' || (draftDue.level === 'overdue' && !p.draftSubmittedDate);
-    }).length;
+    const overdueCount = filteredProjects.filter(projectHasAlert).length;
     const gigafileCount = filteredProjects.filter((p) =>
       p.links.some((l) => l.linkType === 'gigafile' && isGigafileExpiring(l.expiresAt))
     ).length;
@@ -1712,7 +1716,6 @@ export default function VideoProgressApp() {
             </div>
           </div>
 
-          {/* ビュー切替タブ（3パターン） */}
           <div className="flex items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1">
             <button
               type="button"

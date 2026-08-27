@@ -185,13 +185,13 @@ export default function BulkActionModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">内部期日</label>
-                  <input
-                    type="date"
-                    value={internalDeadline}
-                    onChange={(e) => setInternalDeadline(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white"
-                  />
+                 <label className="block text-xs font-semibold text-slate-300 mb-1">締め切り日</label>
+                <input
+                  type="date"
+                  value={internalDeadline}
+                  onChange={(e) => setInternalDeadline(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 [color-scheme:dark]"
+                />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">初稿提出日</label>
