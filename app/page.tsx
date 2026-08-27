@@ -34,12 +34,13 @@ const DIRECTOR_PASSWORD = '0531';
 // 型定義 & 定数
 // =====================================================================
 type ProjectStatus =
-  | 'not_started'
-  | 'waiting_material'
-  | 'editing'
-  | 'draft_review'
-  | 'revision'
-  | 'delivered';
+  | 'not_started'          // 1. 未着手
+  | 'editing'              // 2. 編集
+  | 'client_review'        // 3. CL確認中
+  | 'revision_requested'   // 4. CLから修正
+  | 'revision'             // 5. 修正
+  | 'revision_submitted'   // 6. 修正提出
+  | 'delivered';           // 7. 納品完了
 
 type LinkType = 'google_drive' | 'frame_io' | 'gigafile' | 'youtube_private';
 type ViewMode = 'director' | 'editor';
@@ -109,17 +110,17 @@ interface ClientProgress {
   name: string;
   totalCount: number;
   deliveredCount: number;
-  waitingMaterialCount: number;
   overdueCount: number;
   deliveredRate: number;
 }
 
 const STATUS_ORDER: ProjectStatus[] = [
   'not_started',
-  'waiting_material',
   'editing',
-  'draft_review',
+  'client_review',
+  'revision_requested',
   'revision',
+  'revision_submitted',
   'delivered',
 ];
 
@@ -132,25 +133,30 @@ const STATUS_CONFIG: Record<
     badge: 'bg-slate-700 text-slate-200 border-slate-600',
     dot: 'bg-slate-400',
   },
-  waiting_material: {
-    label: '素材待ち',
-    badge: 'bg-sky-950 text-sky-300 border-sky-800',
-    dot: 'bg-sky-400',
-  },
   editing: {
-    label: '編集・カット組み',
+    label: '編集',
     badge: 'bg-indigo-950 text-indigo-300 border-indigo-800',
     dot: 'bg-indigo-400',
   },
-  draft_review: {
-    label: '初稿確認',
+  client_review: {
+    label: 'CL確認中',
     badge: 'bg-amber-950 text-amber-300 border-amber-800',
     dot: 'bg-amber-400',
   },
+  revision_requested: {
+    label: 'CLから修正',
+    badge: 'bg-fuchsia-950 text-fuchsia-300 border-fuchsia-800',
+    dot: 'bg-fuchsia-400',
+  },
   revision: {
-    label: '修正対応',
+    label: '修正',
     badge: 'bg-rose-950 text-rose-300 border-rose-800',
     dot: 'bg-rose-400',
+  },
+  revision_submitted: {
+    label: '修正提出',
+    badge: 'bg-sky-950 text-sky-300 border-sky-800',
+    dot: 'bg-sky-400',
   },
   delivered: {
     label: '納品完了',
@@ -298,12 +304,17 @@ function formDataToLinks(f: ProjectFormData): ProjectLink[] {
 }
 
 function mapDbToProject(row: any): Project {
+  // DB内の古いステータス値を新しい値に読み替える処理
+  let status = row.status as string;
+  if (status === 'draft_review') status = 'client_review';
+  if (status === 'waiting_material') status = 'not_started'; // 素材待ちを未着手へ
+
   return {
     id: row.id,
     clientName: row.client_name || row.title || '未設定',
     title: row.title || '',
     fileName: row.file_name || '',
-    status: (row.status as ProjectStatus) || 'not_started',
+    status: (status as ProjectStatus) || 'not_started',
     mainEditor: row.main_editor || row.assignee || '',
     director: row.director || '',
     internalDueDate: row.internal_due_date || null,
@@ -372,7 +383,7 @@ function ProjectCard({
   onDelete: (project: Project) => void;
 }) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
-  const statusConfig = STATUS_CONFIG[project.status];
+  const statusConfig = STATUS_CONFIG[project.status] || STATUS_CONFIG['not_started'];
   const internalDue = getDueBadge(project.internalDueDate);
   const draftDue = getDueBadge(project.draftDueDate);
   const draftDone = !!project.draftSubmittedDate;
@@ -681,9 +692,8 @@ function DirectorPanel({
                   </div>
                   <div className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-600">
                     <span>全{c.totalCount}件</span>
-                    <span>素材待ち {c.waitingMaterialCount}件</span>
                     {c.overdueCount > 0 && (
-                      <span className="font-medium text-rose-400">期日超過 {c.overdueCount}件</span>
+                      <span className="font-medium text-rose-400 ml-2">期日超過 {c.overdueCount}件</span>
                     )}
                   </div>
                 </div>
@@ -1117,7 +1127,7 @@ function ProjectFormModal({
 // =====================================================================
 export default function VideoProgressApp() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]); // 選択中のID保持
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [isDirectorUnlocked, setIsDirectorUnlocked] = useState<boolean>(false);
@@ -1163,14 +1173,12 @@ export default function VideoProgressApp() {
     window.setTimeout(() => setToastMessage(null), 2000);
   }
 
-  // 選択のトグル処理
   const handleToggleSelect = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
-  // 一括変更の実行処理
   const handleApplyBulkUpdate = async (updates: BulkUpdateData) => {
     const dbUpdates: Record<string, any> = {};
     if (updates.status) dbUpdates.status = updates.status;
@@ -1194,7 +1202,6 @@ export default function VideoProgressApp() {
 
       if (error) throw error;
 
-      // LINE一括通知の呼び出し
       const updatedTitles = projects
         .filter((p) => selectedIds.includes(p.id))
         .map((p) => p.title);
@@ -1217,7 +1224,6 @@ export default function VideoProgressApp() {
     }
   };
 
-  // 一括削除の実行処理
   const handleBulkDelete = async () => {
     try {
       const { error } = await supabase
@@ -1452,7 +1458,6 @@ export default function VideoProgressApp() {
           name,
           totalCount: owned.length,
           deliveredCount,
-          waitingMaterialCount: owned.filter((p) => p.status === 'waiting_material').length,
           overdueCount: owned.filter(projectHasAlert).length,
           deliveredRate: owned.length > 0 ? Math.round((deliveredCount / owned.length) * 100) : 0,
         };
@@ -1485,7 +1490,7 @@ export default function VideoProgressApp() {
       p.links.some((l) => l.linkType === 'gigafile' && isGigafileExpiring(l.expiresAt))
     ).length;
     const activeCount = filteredProjects.filter((p) => p.status !== 'delivered').length;
-    const revisionCount = filteredProjects.filter((p) => p.status === 'revision').length;
+    const revisionCount = filteredProjects.filter((p) => p.status === 'revision' || p.status === 'revision_requested' || p.status === 'revision_submitted').length;
     return { overdueCount, gigafileCount, activeCount, revisionCount };
   }, [filteredProjects]);
 
@@ -1555,7 +1560,7 @@ export default function VideoProgressApp() {
             value={summary.gigafileCount}
             tone={summary.gigafileCount > 0 ? 'warn' : 'default'}
           />
-          <SummaryCard label="修正対応中" value={summary.revisionCount} tone="default" />
+          <SummaryCard label="修正関連対応中" value={summary.revisionCount} tone="default" />
         </div>
 
         {/* ディレクター管理パネル */}

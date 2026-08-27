@@ -145,13 +145,13 @@ export default function BulkActionModal({
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"
                 >
                   <option value="">(変更なし)</option>
-                  <option value="未着手">未着手</option>
-                  <option value="素材待ち">素材待ち</option>
-                  <option value="編集・カット組み">編集・カット組み</option>
-                  <option value="初稿確認">初稿確認</option>
-                  <option value="修正対応">修正対応</option>
-                  <option value="完了">完了</option>
-                  <option value="アーカイブ">アーカイブ</option>
+                  <option value="not_started">未着手</option>
+                  <option value="editing">編集</option>
+                  <option value="client_review">CL確認中</option>
+                  <option value="revision_requested">CLから修正</option>
+                  <option value="revision">修正</option>
+                  <option value="revision_submitted">修正提出</option>
+                  <option value="delivered">納品完了</option>
                 </select>
               </div>
 
