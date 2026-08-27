@@ -25,6 +25,8 @@ import {
   Users,
   Video,
   X,
+  Table as TableIcon,
+  LayoutGrid,
 } from 'lucide-react';
 
 // ディレクター用ロック解除用パスワード
@@ -43,7 +45,7 @@ type ProjectStatus =
   | 'delivered';           // 7. 納品完了
 
 type LinkType = 'google_drive' | 'frame_io' | 'gigafile' | 'youtube_private';
-type ViewMode = 'director' | 'editor';
+type ViewMode = 'editor' | 'director' | 'client';
 
 interface ProjectLink {
   id: string;
@@ -304,10 +306,9 @@ function formDataToLinks(f: ProjectFormData): ProjectLink[] {
 }
 
 function mapDbToProject(row: any): Project {
-  // DB内の古いステータス値を新しい値に読み替える処理
   let status = row.status as string;
   if (status === 'draft_review') status = 'client_review';
-  if (status === 'waiting_material') status = 'not_started'; // 素材待ちを未着手へ
+  if (status === 'waiting_material') status = 'not_started';
 
   return {
     id: row.id,
@@ -417,7 +418,7 @@ function ProjectCard({
           />
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-neutral-400">{project.clientName}</p>
-            <h3 className="truncate text-sm font-semibold text-neutral-100">{project.title}</h3>
+            <h3 className="truncate text-sm font-semibold text-neutral-100 cursor-pointer hover:text-amber-400" onClick={() => onEdit(project)}>{project.title}</h3>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -586,6 +587,201 @@ function PlainDateRow({ label, dateStr }: { label: string; dateStr: string | nul
       <span className={dateStr ? 'text-neutral-300' : 'text-neutral-600'}>
         {formatDateShort(dateStr)}
       </span>
+    </div>
+  );
+}
+
+// クライアント別専用テーブルビュー（新規コンポーネント）
+function ClientTableView({
+  projects,
+  clientNames,
+  selectedClient,
+  onSelectClient,
+  onEditProject,
+  onCopyLink,
+  selectedIds,
+  onToggleSelect,
+}: {
+  projects: Project[];
+  clientNames: string[];
+  selectedClient: string;
+  onSelectClient: (c: string) => void;
+  onEditProject: (p: Project) => void;
+  onCopyLink: (url: string, label: string) => void;
+  selectedIds: string[];
+  onToggleSelect: (id: string) => void;
+}) {
+  const currentClient = selectedClient === 'all' && clientNames.length > 0 ? clientNames[0] : selectedClient;
+  const clientProjects = projects.filter((p) => p.clientName === currentClient);
+
+  const totalCount = clientProjects.length;
+  const deliveredCount = clientProjects.filter((p) => p.status === 'delivered').length;
+  const activeCount = totalCount - deliveredCount;
+  const overdueCount = clientProjects.filter(projectHasAlert).length;
+  const rate = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* クライアント選択タブ ＆ サマリー */}
+      <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-amber-400" />
+            <span className="text-xs font-semibold text-neutral-300">クライアント選択:</span>
+            <select
+              value={currentClient}
+              onChange={(e) => onSelectClient(e.target.value)}
+              className="rounded-md border border-neutral-700 bg-neutral-950 px-3 py-1.5 text-xs font-bold text-neutral-100 focus:border-amber-500 focus:outline-none"
+            >
+              {clientNames.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs">
+            <div className="text-neutral-400">
+              全 <span className="font-bold text-neutral-100">{totalCount}</span> 件
+            </div>
+            <div className="text-neutral-400">
+              進行中 <span className="font-bold text-amber-400">{activeCount}</span> 件
+            </div>
+            <div className="text-neutral-400">
+              完了 <span className="font-bold text-emerald-400">{deliveredCount}</span> 件
+            </div>
+            {overdueCount > 0 && (
+              <div className="rounded bg-rose-950 px-2 py-0.5 text-rose-300 font-semibold">
+                要対応 {overdueCount} 件
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 進捗プログレスバー */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px] text-neutral-400">
+            <span>納品完了率</span>
+            <span className="font-semibold text-neutral-200">{rate}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
+            <div
+              className="h-full bg-emerald-500 transition-all duration-300"
+              style={{ width: `${rate}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 案件一覧テーブル */}
+      <div className="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900 shadow">
+        <table className="w-full text-left text-xs">
+          <thead className="border-b border-neutral-800 bg-neutral-950/80 text-neutral-400 uppercase tracking-wider">
+            <tr>
+              <th className="p-3 w-10 text-center">選択</th>
+              <th className="p-3">案件名 / タイトル</th>
+              <th className="p-3">担当編集者</th>
+              <th className="p-3">ステータス</th>
+              <th className="p-3">先方提出日(CL)</th>
+              <th className="p-3">期日アラート</th>
+              <th className="p-3 text-center">Googleドライブ</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-neutral-800/60 text-neutral-200">
+            {clientProjects.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="p-8 text-center text-neutral-500">
+                  このクライアントの案件はありません
+                </td>
+              </tr>
+            ) : (
+              clientProjects.map((project) => {
+                const statusConfig = STATUS_CONFIG[project.status] || STATUS_CONFIG['not_started'];
+                const draftDue = getDueBadge(project.draftDueDate);
+                const gDrive = project.links.find((l) => l.linkType === 'google_drive');
+                const hasAlert = projectHasAlert(project);
+
+                return (
+                  <tr
+                    key={project.id}
+                    className="hover:bg-neutral-800/50 transition-colors"
+                  >
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(project.id)}
+                        onChange={() => onToggleSelect(project.id)}
+                        className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                      />
+                    </td>
+                    <td className="p-3">
+                      <button
+                        type="button"
+                        onClick={() => onEditProject(project)}
+                        className="font-bold text-neutral-100 hover:text-amber-400 text-left flex items-center gap-1.5"
+                      >
+                        {project.title}
+                        <Pencil className="h-3 w-3 text-neutral-500 opacity-60" />
+                      </button>
+                      {project.fileName && (
+                        <p className="text-[10px] text-neutral-500">{project.fileName}</p>
+                      )}
+                    </td>
+                    <td className="p-3 font-medium">
+                      {project.mainEditor || '未割り当て'}
+                      {project.director && <span className="text-neutral-500 text-[10px] block">Dir: {project.director}</span>}
+                    </td>
+                    <td className="p-3">
+                      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium ${statusConfig.badge}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
+                        {statusConfig.label}
+                      </span>
+                    </td>
+                    <td className="p-3 font-medium text-neutral-300">
+                      {formatDateShort(project.clientSubmittedDate || project.draftDueDate)}
+                    </td>
+                    <td className="p-3">
+                      {hasAlert ? (
+                        <span className="inline-flex items-center gap-1 rounded bg-rose-950 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
+                          <AlertTriangle className="h-3 w-3" />
+                          {draftDue.label}
+                        </span>
+                      ) : (
+                        <span className="text-neutral-500 text-[11px]">{draftDue.label}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-center">
+                      {gDrive ? (
+                        <div className="inline-flex items-center gap-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1">
+                          <a
+                            href={gDrive.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-400 hover:underline flex items-center gap-1 font-semibold"
+                          >
+                            <HardDrive className="h-3.5 w-3.5" /> 開く
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => onCopyLink(gDrive.url, 'Googleドライブ')}
+                            className="ml-1 text-neutral-400 hover:text-white"
+                            title="URLをコピー"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-neutral-600 text-[11px]">-</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -1130,6 +1326,7 @@ export default function VideoProgressApp() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
+  const [selectedClientView, setSelectedClientView] = useState<string>('all');
   const [isDirectorUnlocked, setIsDirectorUnlocked] = useState<boolean>(false);
   const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
   const [inputPassword, setInputPassword] = useState<string>('');
@@ -1515,6 +1712,7 @@ export default function VideoProgressApp() {
             </div>
           </div>
 
+          {/* ビュー切替タブ（3パターン） */}
           <div className="flex items-center rounded-lg border border-neutral-800 bg-neutral-900 p-1">
             <button
               type="button"
@@ -1525,9 +1723,23 @@ export default function VideoProgressApp() {
                   : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              <UserCheck className="h-3.5 w-3.5" />
-              編集者用
+              <LayoutGrid className="h-3.5 w-3.5" />
+              編集者用(カンバン)
             </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode('client')}
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+                viewMode === 'client'
+                  ? 'bg-amber-600 text-neutral-950 shadow'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <TableIcon className="h-3.5 w-3.5" />
+              クライアント別
+            </button>
+
             <button
               type="button"
               onClick={handleSelectDirectorView}
@@ -1568,25 +1780,38 @@ export default function VideoProgressApp() {
           <DirectorPanel editorWorkload={editorWorkload} clientProgress={clientProgress} />
         )}
 
-        {/* フィルター＆カンバンボード */}
-        <div className="space-y-4">
-          <FilterBar
-            filters={filters}
-            onChange={setFilters}
-            clientNames={clientNames}
-            editorNames={editorNames}
-            onOpenAddModal={handleOpenAddModal}
-          />
-          <KanbanBoard
+        {/* 表示モードに応じたビュー描画 */}
+        {viewMode === 'client' ? (
+          <ClientTableView
             projects={filteredProjects}
+            clientNames={clientNames}
+            selectedClient={selectedClientView}
+            onSelectClient={setSelectedClientView}
+            onEditProject={handleOpenEditModal}
+            onCopyLink={handleCopyLink}
             selectedIds={selectedIds}
             onToggleSelect={handleToggleSelect}
-            onStatusChange={handleStatusChange}
-            onCopyLink={handleCopyLink}
-            onEdit={handleOpenEditModal}
-            onDelete={handleDeleteProject}
           />
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <FilterBar
+              filters={filters}
+              onChange={setFilters}
+              clientNames={clientNames}
+              editorNames={editorNames}
+              onOpenAddModal={handleOpenAddModal}
+            />
+            <KanbanBoard
+              projects={filteredProjects}
+              selectedIds={selectedIds}
+              onToggleSelect={handleToggleSelect}
+              onStatusChange={handleStatusChange}
+              onCopyLink={handleCopyLink}
+              onEdit={handleOpenEditModal}
+              onDelete={handleDeleteProject}
+            />
+          </div>
+        )}
       </main>
 
       {/* 一括操作バー ＆ モーダル */}
