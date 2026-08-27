@@ -29,20 +29,16 @@ import {
   LayoutGrid,
 } from 'lucide-react';
 
-// ディレクター用ロック解除用パスワード
 const DIRECTOR_PASSWORD = '0531';
 
-// =====================================================================
-// 型定義 & 定数
-// =====================================================================
 type ProjectStatus =
-  | 'not_started'          // 1. 未着手
-  | 'editing'              // 2. 編集
-  | 'client_review'        // 3. CL確認中
-  | 'revision_requested'   // 4. CLから修正
-  | 'revision'             // 5. 修正
-  | 'revision_submitted'   // 6. 修正提出
-  | 'delivered';           // 7. 納品完了
+  | 'not_started'
+  | 'editing'
+  | 'client_review'
+  | 'revision_requested'
+  | 'revision'
+  | 'revision_submitted'
+  | 'delivered';
 
 type LinkType = 'google_drive' | 'frame_io' | 'gigafile' | 'youtube_private';
 type ViewMode = 'editor' | 'director' | 'client';
@@ -132,37 +128,37 @@ const STATUS_CONFIG: Record<
 > = {
   not_started: {
     label: '未着手',
-    badge: 'bg-slate-700 text-slate-200 border-slate-600',
-    dot: 'bg-slate-400',
+    badge: 'bg-slate-700 text-slate-100 border-slate-500',
+    dot: 'bg-slate-300',
   },
   editing: {
     label: '編集',
-    badge: 'bg-indigo-950 text-indigo-300 border-indigo-800',
+    badge: 'bg-indigo-950 text-indigo-200 border-indigo-700',
     dot: 'bg-indigo-400',
   },
   client_review: {
     label: 'CL確認中',
-    badge: 'bg-amber-950 text-amber-300 border-amber-800',
+    badge: 'bg-amber-950 text-amber-200 border-amber-700',
     dot: 'bg-amber-400',
   },
   revision_requested: {
     label: 'CLから修正',
-    badge: 'bg-fuchsia-950 text-fuchsia-300 border-fuchsia-800',
+    badge: 'bg-fuchsia-950 text-fuchsia-200 border-fuchsia-700',
     dot: 'bg-fuchsia-400',
   },
   revision: {
     label: '修正',
-    badge: 'bg-rose-950 text-rose-300 border-rose-800',
+    badge: 'bg-rose-950 text-rose-200 border-rose-700',
     dot: 'bg-rose-400',
   },
   revision_submitted: {
     label: '修正提出',
-    badge: 'bg-sky-950 text-sky-300 border-sky-800',
+    badge: 'bg-sky-950 text-sky-200 border-sky-700',
     dot: 'bg-sky-400',
   },
   delivered: {
     label: '納品完了',
-    badge: 'bg-emerald-950 text-emerald-300 border-emerald-800',
+    badge: 'bg-emerald-950 text-emerald-200 border-emerald-700',
     dot: 'bg-emerald-400',
   },
 };
@@ -226,7 +222,6 @@ function isGigafileExpiring(dateStr: string | null): boolean {
   return days !== null && days <= 1;
 }
 
-// 案件のアラート判定（作業中のフェーズのみ期日超過を警告）
 function projectHasAlert(p: Project): boolean {
   const internalDue = getDueBadge(p.internalDueDate);
   const draftDue = getDueBadge(p.draftDueDate);
@@ -234,7 +229,6 @@ function projectHasAlert(p: Project): boolean {
     (l) => l.linkType === 'gigafile' && isGigafileExpiring(l.expiresAt)
   );
 
-  // 初稿提出後・作業完了後のステータスでは締め切り日超過の警告を出さない
   const isWorkInPhase = p.status === 'not_started' || p.status === 'editing';
 
   const internalOverdue = isWorkInPhase && internalDue.level === 'overdue';
@@ -355,14 +349,11 @@ function mapProjectToDb(p: Partial<Project>, descriptionText?: string) {
   };
 }
 
-// =====================================================================
-// サブコンポーネント
-// =====================================================================
 function Toast({ message }: { message: string | null }) {
   if (!message) return null;
   return (
     <div className="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
-      <div className="flex items-center gap-2 rounded-full border border-emerald-800 bg-emerald-950 px-4 py-2 text-xs font-medium text-emerald-300 shadow-lg">
+      <div className="flex items-center gap-2 rounded-full border border-emerald-700 bg-emerald-950 px-4 py-2 text-xs font-semibold text-emerald-200 shadow-lg">
         <Check className="h-3.5 w-3.5" />
         {message}
       </div>
@@ -393,7 +384,6 @@ function ProjectCard({
   const draftDue = getDueBadge(project.draftDueDate);
   const draftDone = !!project.draftSubmittedDate;
 
-  // 編集・未着手以外のフェーズでは締め切り日アラートを非表示にする
   const isWorkInPhase = project.status === 'not_started' || project.status === 'editing';
 
   const hasGigafileAlert = project.links.some(
@@ -403,9 +393,9 @@ function ProjectCard({
 
   return (
     <div
-      className={`group relative rounded-lg border bg-neutral-900 p-3.5 shadow-sm transition-colors hover:border-neutral-600 ${
+      className={`group relative rounded-lg border bg-neutral-900 p-3.5 shadow-sm transition-colors hover:border-neutral-500 ${
         isSelected ? 'ring-2 ring-amber-500 border-amber-500/50' : ''
-      } ${hasAlert ? 'border-rose-800/60' : 'border-neutral-800'}`}
+      } ${hasAlert ? 'border-rose-700/80' : 'border-neutral-800'}`}
     >
       {project.priority > 0 && (
         <div
@@ -421,11 +411,11 @@ function ProjectCard({
             type="checkbox"
             checked={isSelected}
             onChange={() => onToggleSelect(project.id)}
-            className="mt-0.5 h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+            className="mt-0.5 h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
           />
           <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-neutral-400">{project.clientName}</p>
-            <h3 className="truncate text-sm font-semibold text-neutral-100 cursor-pointer hover:text-amber-400" onClick={() => onEdit(project)}>{project.title}</h3>
+            <p className="truncate text-xs font-semibold text-amber-300">{project.clientName}</p>
+            <h3 className="truncate text-sm font-bold text-neutral-100 cursor-pointer hover:text-amber-400" onClick={() => onEdit(project)}>{project.title}</h3>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -433,7 +423,7 @@ function ProjectCard({
           <button
             type="button"
             onClick={() => onEdit(project)}
-            className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
             aria-label="編集"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -441,7 +431,7 @@ function ProjectCard({
           <button
             type="button"
             onClick={() => onDelete(project)}
-            className="rounded p-1 text-neutral-500 hover:bg-rose-950 hover:text-rose-300"
+            className="rounded p-1 text-neutral-400 hover:bg-rose-950 hover:text-rose-200"
             aria-label="削除"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -453,13 +443,13 @@ function ProjectCard({
         <button
           type="button"
           onClick={() => setStatusMenuOpen((v) => !v)}
-          className={`flex w-full items-center justify-between gap-1 rounded-md border px-2 py-1 text-xs font-medium ${statusConfig.badge}`}
+          className={`flex w-full items-center justify-between gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${statusConfig.badge}`}
         >
           <span className="flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
             {statusConfig.label}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          <ChevronDown className="h-3.5 w-3.5 opacity-80" />
         </button>
 
         {statusMenuOpen && (
@@ -475,7 +465,7 @@ function ProjectCard({
                       setStatusMenuOpen(false);
                     }}
                     className={`flex w-full items-center gap-1.5 px-2.5 py-1.5 text-left text-xs hover:bg-neutral-700 ${
-                      s === project.status ? 'text-neutral-100' : 'text-neutral-400'
+                      s === project.status ? 'text-neutral-100 font-bold' : 'text-neutral-300'
                     }`}
                   >
                     <span className={`h-1.5 w-1.5 rounded-full ${STATUS_CONFIG[s].dot}`} />
@@ -488,15 +478,15 @@ function ProjectCard({
         )}
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-400">
-        <span>編集: {project.mainEditor || '未割当'}</span>
-        <span>Dir: {project.director || '未割当'}</span>
+      <div className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-neutral-300">
+        <span>編集: <strong className="text-neutral-100 font-medium">{project.mainEditor || '未割当'}</strong></span>
+        <span>Dir: <strong className="text-neutral-100 font-medium">{project.director || '未割当'}</strong></span>
       </div>
 
-      <div className="mb-3 space-y-1.5">
-        <DueRow icon={<Clock className="h-3.5 w-3.5" />} label="締め切り日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} />
+      <div className="mb-3 space-y-1.5 border-t border-neutral-800/80 pt-2">
+        <DueRow icon={<Clock className="h-3.5 w-3.5 text-neutral-400" />} label="締め切り日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} />
         <DueRow
-          icon={<Calendar className="h-3.5 w-3.5" />}
+          icon={<Calendar className="h-3.5 w-3.5 text-neutral-400" />}
           label="初稿提出期日"
           dateStr={project.draftDueDate}
           badge={draftDue}
@@ -506,13 +496,13 @@ function ProjectCard({
         <PlainDateRow label="先方提出日(CL)" dateStr={project.clientSubmittedDate} />
         <PlainDateRow label="修正完了日" dateStr={project.revisionCompletedDate} />
         {hasGigafileAlert && (
-          <div className="flex items-center gap-1.5 rounded bg-rose-950/60 px-2 py-1 text-[11px] font-medium text-rose-300">
-            <AlertTriangle className="h-3 w-3" />
+          <div className="flex items-center gap-1.5 rounded bg-rose-950 px-2 py-1 text-[11px] font-semibold text-rose-200 border border-rose-800">
+            <AlertTriangle className="h-3 w-3 text-rose-300" />
             ギガファイル便の有効期限が近づいています
           </div>
         )}
         {project.revisionNote && (
-          <p className="rounded bg-neutral-800/60 px-2 py-1 text-[11px] text-neutral-400">
+          <p className="rounded bg-neutral-800 px-2 py-1 text-[11px] text-neutral-300 border border-neutral-700">
             修正指示: {project.revisionNote}
           </p>
         )}
@@ -526,22 +516,22 @@ function ProjectCard({
             return (
               <div
                 key={link.id}
-                className="flex items-center overflow-hidden rounded-md border border-neutral-800 bg-neutral-950"
+                className="flex items-center overflow-hidden rounded-md border border-neutral-700 bg-neutral-950"
                 title={cfg.label}
               >
                 <a
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-800"
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] text-neutral-200 hover:bg-neutral-800"
                 >
-                  <Icon className="h-3 w-3" />
-                  <ExternalLink className="h-2.5 w-2.5 opacity-50" />
+                  <Icon className="h-3 w-3 text-amber-400" />
+                  <ExternalLink className="h-2.5 w-2.5 opacity-70" />
                 </a>
                 <button
                   type="button"
                   onClick={() => onCopyLink(link.url, cfg.label)}
-                  className="border-l border-neutral-800 px-1.5 py-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
+                  className="border-l border-neutral-700 px-1.5 py-1 text-neutral-300 hover:bg-neutral-800 hover:text-white"
                   aria-label={`${cfg.label}のURLをコピー`}
                 >
                   <Copy className="h-3 w-3" />
@@ -573,30 +563,30 @@ function DueRow({
   const level = (done || suppressAlert) ? 'normal' : badge.level;
   const levelStyle = {
     overdue: 'text-rose-400 font-bold',
-    soon: 'text-amber-400 font-semibold',
-    normal: 'text-neutral-400',
-    none: 'text-neutral-600',
+    soon: 'text-amber-300 font-bold',
+    normal: 'text-neutral-300',
+    none: 'text-neutral-400',
   }[level];
 
   const displayBadgeText = done ? '提出済み' : (suppressAlert && badge.level === 'overdue') ? '経過' : badge.label;
 
   return (
     <div className="flex items-center justify-between text-[11px]">
-      <span className="flex items-center gap-1 text-neutral-500">
+      <span className="flex items-center gap-1.5 text-neutral-300 font-medium">
         {icon}
         {label}
-        <span className="text-neutral-400">{formatDateShort(dateStr)}</span>
+        <span className="text-neutral-200 font-semibold">{formatDateShort(dateStr)}</span>
       </span>
-      <span className={`font-medium ${levelStyle}`}>{displayBadgeText}</span>
+      <span className={`font-semibold ${levelStyle}`}>{displayBadgeText}</span>
     </div>
   );
 }
 
 function PlainDateRow({ label, dateStr }: { label: string; dateStr: string | null }) {
   return (
-    <div className="flex items-center justify-between text-[11px] text-neutral-500">
+    <div className="flex items-center justify-between text-[11px] text-neutral-300 font-medium">
       <span>{label}</span>
-      <span className={dateStr ? 'text-neutral-300' : 'text-neutral-600'}>
+      <span className={dateStr ? 'text-neutral-100 font-semibold' : 'text-neutral-400'}>
         {formatDateShort(dateStr)}
       </span>
     </div>
@@ -637,7 +627,7 @@ function ClientTableView({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-amber-400" />
-            <span className="text-xs font-semibold text-neutral-300">クライアント選択:</span>
+            <span className="text-xs font-bold text-neutral-200">クライアント選択:</span>
             <select
               value={currentClient}
               onChange={(e) => onSelectClient(e.target.value)}
@@ -651,18 +641,18 @@ function ClientTableView({
             </select>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
-            <div className="text-neutral-400">
+          <div className="flex items-center gap-4 text-xs font-medium">
+            <div className="text-neutral-300">
               全 <span className="font-bold text-neutral-100">{totalCount}</span> 件
             </div>
-            <div className="text-neutral-400">
+            <div className="text-neutral-300">
               進行中 <span className="font-bold text-amber-400">{activeCount}</span> 件
             </div>
-            <div className="text-neutral-400">
+            <div className="text-neutral-300">
               完了 <span className="font-bold text-emerald-400">{deliveredCount}</span> 件
             </div>
             {overdueCount > 0 && (
-              <div className="rounded bg-rose-950 px-2 py-0.5 text-rose-300 font-semibold">
+              <div className="rounded bg-rose-950 px-2 py-0.5 text-rose-300 font-semibold border border-rose-800">
                 要対応 {overdueCount} 件
               </div>
             )}
@@ -670,9 +660,9 @@ function ClientTableView({
         </div>
 
         <div className="space-y-1">
-          <div className="flex justify-between text-[11px] text-neutral-400">
+          <div className="flex justify-between text-[11px] text-neutral-300 font-medium">
             <span>納品完了率</span>
-            <span className="font-semibold text-neutral-200">{rate}%</span>
+            <span className="font-semibold text-neutral-100">{rate}%</span>
           </div>
           <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-800">
             <div
@@ -685,7 +675,7 @@ function ClientTableView({
 
       <div className="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900 shadow">
         <table className="w-full text-left text-xs">
-          <thead className="border-b border-neutral-800 bg-neutral-950/80 text-neutral-400 uppercase tracking-wider">
+          <thead className="border-b border-neutral-800 bg-neutral-950/90 text-neutral-300 font-semibold uppercase tracking-wider">
             <tr>
               <th className="p-3 w-10 text-center">選択</th>
               <th className="p-3">案件名 / タイトル</th>
@@ -696,10 +686,10 @@ function ClientTableView({
               <th className="p-3 text-center">Googleドライブ</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800/60 text-neutral-200">
+          <tbody className="divide-y divide-neutral-800/80 text-neutral-200">
             {clientProjects.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-neutral-500">
+                <td colSpan={7} className="p-8 text-center text-neutral-400 font-medium">
                   このクライアントの案件はありません
                 </td>
               </tr>
@@ -713,14 +703,14 @@ function ClientTableView({
                 return (
                   <tr
                     key={project.id}
-                    className="hover:bg-neutral-800/50 transition-colors"
+                    className="hover:bg-neutral-800/70 transition-colors"
                   >
                     <td className="p-3 text-center">
                       <input
                         type="checkbox"
                         checked={selectedIds.includes(project.id)}
                         onChange={() => onToggleSelect(project.id)}
-                        className="h-4 w-4 rounded border-neutral-700 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
+                        className="h-4 w-4 rounded border-neutral-600 bg-neutral-950 text-amber-500 focus:ring-amber-500 cursor-pointer"
                       />
                     </td>
                     <td className="p-3">
@@ -730,33 +720,33 @@ function ClientTableView({
                         className="font-bold text-neutral-100 hover:text-amber-400 text-left flex items-center gap-1.5"
                       >
                         {project.title}
-                        <Pencil className="h-3 w-3 text-neutral-500 opacity-60" />
+                        <Pencil className="h-3 w-3 text-neutral-400" />
                       </button>
                       {project.fileName && (
-                        <p className="text-[10px] text-neutral-500">{project.fileName}</p>
+                        <p className="text-[10px] text-neutral-400 font-medium">{project.fileName}</p>
                       )}
                     </td>
-                    <td className="p-3 font-medium">
+                    <td className="p-3 font-semibold text-neutral-200">
                       {project.mainEditor || '未割り当て'}
-                      {project.director && <span className="text-neutral-500 text-[10px] block">Dir: {project.director}</span>}
+                      {project.director && <span className="text-neutral-400 text-[10px] block font-normal">Dir: {project.director}</span>}
                     </td>
                     <td className="p-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-medium ${statusConfig.badge}`}>
+                      <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-semibold ${statusConfig.badge}`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${statusConfig.dot}`} />
                         {statusConfig.label}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-neutral-300">
+                    <td className="p-3 font-semibold text-neutral-100">
                       {formatDateShort(project.clientSubmittedDate || project.draftDueDate)}
                     </td>
                     <td className="p-3">
                       {hasAlert ? (
-                        <span className="inline-flex items-center gap-1 rounded bg-rose-950 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
+                        <span className="inline-flex items-center gap-1 rounded bg-rose-950 px-2 py-0.5 text-[11px] font-bold text-rose-300 border border-rose-800">
                           <AlertTriangle className="h-3 w-3" />
                           {draftDue.label}
                         </span>
                       ) : (
-                        <span className="text-neutral-500 text-[11px]">{draftDue.label}</span>
+                        <span className="text-neutral-300 font-medium text-[11px]">{draftDue.label}</span>
                       )}
                     </td>
                     <td className="p-3 text-center">
@@ -766,21 +756,21 @@ function ClientTableView({
                             href={gDrive.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-amber-400 hover:underline flex items-center gap-1 font-semibold"
+                            className="text-amber-400 hover:underline flex items-center gap-1 font-bold"
                           >
                             <HardDrive className="h-3.5 w-3.5" /> 開く
                           </a>
                           <button
                             type="button"
                             onClick={() => onCopyLink(gDrive.url, 'Googleドライブ')}
-                            className="ml-1 text-neutral-400 hover:text-white"
+                            className="ml-1 text-neutral-300 hover:text-white"
                             title="URLをコピー"
                           >
                             <Copy className="h-3 w-3" />
                           </button>
                         </div>
                       ) : (
-                        <span className="text-neutral-600 text-[11px]">-</span>
+                        <span className="text-neutral-500 font-medium text-[11px]">-</span>
                       )}
                     </td>
                   </tr>
@@ -808,19 +798,19 @@ function DirectorPanel({
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-2.5">
         <Users className="h-4 w-4 text-amber-400" />
         <h2 className="text-sm font-bold text-neutral-100">ディレクター管理パネル</h2>
-        <span className="text-[11px] text-neutral-600">
+        <span className="text-[11px] text-neutral-400">
           担当者別の負荷とクライアント別の進捗をひと目で確認
         </span>
       </div>
 
       <div className="grid grid-cols-1 gap-0 lg:grid-cols-2">
         <div className="border-b border-neutral-800 p-4 lg:border-b-0 lg:border-r">
-          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
-            <Users className="h-3.5 w-3.5 text-neutral-500" />
+          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+            <Users className="h-3.5 w-3.5 text-neutral-400" />
             担当者別 抱え案件数・負荷
           </h3>
           {editorWorkload.length === 0 ? (
-            <p className="text-xs text-neutral-600">担当者データがありません</p>
+            <p className="text-xs text-neutral-400">担当者データがありません</p>
           ) : (
             <div className="space-y-3">
               {editorWorkload.map((w) => {
@@ -830,17 +820,17 @@ function DirectorPanel({
                 return (
                   <div key={w.name}>
                     <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-neutral-200">{w.name}</span>
+                      <span className="font-semibold text-neutral-100">{w.name}</span>
                       <span className="flex items-center gap-1.5">
-                        <span className="text-neutral-400">
-                          進行中 <span className="font-semibold text-neutral-100">{w.activeCount}</span>件
+                        <span className="text-neutral-300">
+                          進行中 <span className="font-bold text-neutral-100">{w.activeCount}</span>件
                         </span>
                         {w.overdueCount > 0 && (
                           <span
-                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                               level === 'danger'
-                                ? 'bg-rose-950 text-rose-300'
-                                : 'bg-amber-950 text-amber-300'
+                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                : 'bg-amber-950 text-amber-300 border border-amber-800'
                             }`}
                           >
                             要対応 {w.overdueCount}
@@ -860,7 +850,7 @@ function DirectorPanel({
                         style={{ width: `${Math.max(4, ratio * 100)}%` }}
                       />
                     </div>
-                    <p className="mt-0.5 text-[10px] text-neutral-600">
+                    <p className="mt-0.5 text-[10px] text-neutral-400 font-medium">
                       累計{w.totalCount}件中 納品完了{w.deliveredCount}件
                     </p>
                   </div>
@@ -871,21 +861,21 @@ function DirectorPanel({
         </div>
 
         <div className="p-4">
-          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-semibold text-neutral-300">
-            <Building2 className="h-3.5 w-3.5 text-neutral-500" />
+          <h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold text-neutral-200">
+            <Building2 className="h-3.5 w-3.5 text-neutral-400" />
             クライアント別 進行状況
           </h3>
           {clientProgress.length === 0 ? (
-            <p className="text-xs text-neutral-600">クライアントデータがありません</p>
+            <p className="text-xs text-neutral-400">クライアントデータがありません</p>
           ) : (
             <div className="space-y-3">
               {clientProgress.map((c) => (
                 <div key={c.name}>
                   <div className="mb-1 flex items-center justify-between text-xs">
-                    <span className="font-medium text-neutral-200">{c.name}</span>
-                    <span className="text-neutral-400">
+                    <span className="font-semibold text-neutral-100">{c.name}</span>
+                    <span className="text-neutral-300">
                       納品完了率{' '}
-                      <span className="font-semibold text-neutral-100">{c.deliveredRate}%</span>
+                      <span className="font-bold text-neutral-100">{c.deliveredRate}%</span>
                     </span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
@@ -894,10 +884,10 @@ function DirectorPanel({
                       style={{ width: `${Math.max(4, c.deliveredRate)}%` }}
                     />
                   </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-600">
+                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-neutral-400 font-medium">
                     <span>全{c.totalCount}件</span>
                     {c.overdueCount > 0 && (
-                      <span className="font-medium text-rose-400 ml-2">期日超過 {c.overdueCount}件</span>
+                      <span className="font-bold text-rose-400 ml-2">期日超過 {c.overdueCount}件</span>
                     )}
                   </div>
                 </div>
@@ -935,17 +925,17 @@ function KanbanBoard({
         const alertCount = columnProjects.filter(projectHasAlert).length;
 
         return (
-          <div key={status} className="flex w-72 shrink-0 flex-col rounded-lg bg-neutral-950/60">
+          <div key={status} className="flex w-72 shrink-0 flex-col rounded-lg bg-neutral-950/80 border border-neutral-800/80">
             <div className="flex items-center justify-between px-2.5 py-2.5">
               <div className="flex items-center gap-1.5">
                 <span className={`h-2 w-2 rounded-full ${config.dot}`} />
-                <h2 className="text-sm font-semibold text-neutral-200">{config.label}</h2>
-                <span className="rounded-full bg-neutral-800 px-1.5 py-0.5 text-[10px] font-medium text-neutral-400">
+                <h2 className="text-sm font-bold text-neutral-100">{config.label}</h2>
+                <span className="rounded-full bg-neutral-800 px-1.5 py-0.5 text-[10px] font-bold text-neutral-300">
                   {columnProjects.length}
                 </span>
               </div>
               {alertCount > 0 && (
-                <span className="rounded-full bg-rose-950 px-1.5 py-0.5 text-[10px] font-medium text-rose-300">
+                <span className="rounded-full bg-rose-950 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 border border-rose-800">
                   要対応 {alertCount}
                 </span>
               )}
@@ -953,7 +943,7 @@ function KanbanBoard({
 
             <div className="flex flex-1 flex-col gap-2.5 px-2.5 pb-2.5">
               {columnProjects.length === 0 ? (
-                <p className="rounded-md border border-dashed border-neutral-800 py-6 text-center text-xs text-neutral-600">
+                <p className="rounded-md border border-dashed border-neutral-800 py-6 text-center text-xs text-neutral-400 font-medium">
                   案件なし
                 </p>
               ) : (
@@ -998,20 +988,20 @@ function FilterBar({
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 p-2.5">
       <div className="relative">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-500" />
+        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
         <input
           type="text"
           value={filters.keyword}
           onChange={(e) => update('keyword', e.target.value)}
           placeholder="案件名・タイトルを検索"
-          className="w-56 rounded-md border border-neutral-700 bg-neutral-950 py-1.5 pl-8 pr-2 text-xs text-neutral-200 placeholder:text-neutral-600 focus:border-amber-600 focus:outline-none"
+          className="w-56 rounded-md border border-neutral-700 bg-neutral-950 py-1.5 pl-8 pr-2 text-xs font-medium text-neutral-100 placeholder:text-neutral-400 focus:border-amber-500 focus:outline-none"
         />
       </div>
 
       <select
         value={filters.clientName}
         onChange={(e) => update('clientName', e.target.value)}
-        className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200 focus:border-amber-600 focus:outline-none"
+        className="rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-neutral-100 focus:border-amber-500 focus:outline-none"
       >
         <option value="all">全クライアント</option>
         {clientNames.map((c) => (
@@ -1024,7 +1014,7 @@ function FilterBar({
       <select
         value={filters.editor}
         onChange={(e) => update('editor', e.target.value)}
-        className="rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-neutral-200 focus:border-amber-600 focus:outline-none"
+        className="rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-neutral-100 focus:border-amber-500 focus:outline-none"
       >
         <option value="all">全担当者</option>
         {editorNames.map((u) => (
@@ -1037,10 +1027,10 @@ function FilterBar({
       <button
         type="button"
         onClick={() => update('onlyAlerts', !filters.onlyAlerts)}
-        className={`flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+        className={`flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-bold transition-colors ${
           filters.onlyAlerts
-            ? 'border-rose-800 bg-rose-950 text-rose-300'
-            : 'border-neutral-700 bg-neutral-950 text-neutral-300 hover:border-neutral-500'
+            ? 'border-rose-700 bg-rose-950 text-rose-200'
+            : 'border-neutral-700 bg-neutral-950 text-neutral-200 hover:border-neutral-500'
         }`}
       >
         <AlertTriangle className="h-3.5 w-3.5" />
@@ -1050,7 +1040,7 @@ function FilterBar({
       <button
         type="button"
         onClick={onOpenAddModal}
-        className="ml-auto flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-neutral-950 hover:bg-amber-500"
+        className="ml-auto flex items-center gap-1.5 rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-neutral-950 hover:bg-amber-500 transition-colors"
       >
         <Plus className="h-3.5 w-3.5" />
         新規案件追加
@@ -1072,21 +1062,21 @@ function DateField({
 }) {
   return (
     <div>
-      {label && <label className="mb-1 block text-[11px] font-medium text-neutral-400">{label}</label>}
+      {label && <label className="mb-1 block text-[11px] font-semibold text-neutral-300">{label}</label>}
       <div className="relative">
         <Calendar
           className={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${
-            accent ? 'text-amber-500' : 'text-neutral-500'
+            accent ? 'text-amber-400' : 'text-neutral-400'
           }`}
         />
         <input
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-md border bg-neutral-950 py-1.5 pl-8 pr-2 text-xs text-neutral-200 focus:outline-none [color-scheme:dark] ${
+          className={`w-full rounded-md border bg-neutral-950 py-1.5 pl-8 pr-2 text-xs font-medium text-neutral-100 focus:outline-none [color-scheme:dark] ${
             accent
-              ? 'border-amber-800/60 focus:border-amber-500'
-              : 'border-neutral-700 focus:border-amber-600'
+              ? 'border-amber-700 focus:border-amber-500'
+              : 'border-neutral-700 focus:border-amber-500'
           }`}
         />
       </div>
@@ -1118,11 +1108,11 @@ function ProjectFormModal({
   }
 
   const inputClass =
-    'w-full rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-600 focus:border-amber-600 focus:outline-none';
-  const labelClass = 'mb-1 block text-[11px] font-medium text-neutral-400';
+    'w-full rounded-md border border-neutral-700 bg-neutral-950 px-2.5 py-1.5 text-xs font-medium text-neutral-100 placeholder:text-neutral-500 focus:border-amber-500 focus:outline-none';
+  const labelClass = 'mb-1 block text-[11px] font-semibold text-neutral-300';
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-900 shadow-2xl">
         <div className="sticky top-0 flex items-center justify-between border-b border-neutral-800 bg-neutral-900 px-4 py-3">
           <h2 className="text-sm font-bold text-neutral-100">
@@ -1131,7 +1121,7 @@ function ProjectFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+            className="rounded p-1 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
             aria-label="閉じる"
           >
             <X className="h-4 w-4" />
@@ -1208,9 +1198,9 @@ function ProjectFormModal({
             </div>
           </div>
 
-          <div className="rounded-md border border-neutral-800 bg-neutral-950/40 p-3">
-            <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400">
-              <Calendar className="h-3.5 w-3.5" />
+          <div className="rounded-md border border-neutral-800 bg-neutral-950/60 p-3">
+            <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-bold text-neutral-200">
+              <Calendar className="h-3.5 w-3.5 text-amber-400" />
               期日・実績日
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -1268,7 +1258,7 @@ function ProjectFormModal({
           </div>
 
           <div className="border-t border-neutral-800 pt-3">
-            <p className="mb-2 text-[11px] font-semibold text-neutral-400">外部リンク</p>
+            <p className="mb-2 text-[11px] font-bold text-neutral-200">外部リンク</p>
             <div className="space-y-2">
               <input
                 className={inputClass}
@@ -1309,13 +1299,13 @@ function ProjectFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-neutral-500"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-200 hover:border-neutral-500"
             >
               キャンセル
             </button>
             <button
               type="submit"
-              className="rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-neutral-950 hover:bg-amber-500"
+              className="rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-neutral-950 hover:bg-amber-500"
             >
               {isEdit ? '更新する' : '追加する'}
             </button>
@@ -1326,9 +1316,6 @@ function ProjectFormModal({
   );
 }
 
-// =====================================================================
-// メインコンポーネント
-// =====================================================================
 export default function VideoProgressApp() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -1697,7 +1684,7 @@ export default function VideoProgressApp() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-neutral-400">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-neutral-300 font-semibold">
         <p className="text-sm">案件データを読み込み中...</p>
       </div>
     );
@@ -1712,7 +1699,7 @@ export default function VideoProgressApp() {
             <Clapperboard className="h-5 w-5 text-amber-400" />
             <div>
               <h1 className="text-sm font-bold tracking-wide text-neutral-100">動画制作・案件進捗管理システム</h1>
-              <p className="text-[11px] text-neutral-500">Aqua Fides / 動画管理ダッシュボード</p>
+              <p className="text-[11px] text-neutral-400 font-medium">Aqua Fides / 動画管理ダッシュボード</p>
             </div>
           </div>
 
@@ -1720,10 +1707,10 @@ export default function VideoProgressApp() {
             <button
               type="button"
               onClick={() => setViewMode('editor')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold transition-all ${
                 viewMode === 'editor'
                   ? 'bg-amber-600 text-neutral-950 shadow'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -1733,10 +1720,10 @@ export default function VideoProgressApp() {
             <button
               type="button"
               onClick={() => setViewMode('client')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold transition-all ${
                 viewMode === 'client'
                   ? 'bg-amber-600 text-neutral-950 shadow'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
               <TableIcon className="h-3.5 w-3.5" />
@@ -1746,10 +1733,10 @@ export default function VideoProgressApp() {
             <button
               type="button"
               onClick={handleSelectDirectorView}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold transition-all ${
                 viewMode === 'director'
                   ? 'bg-amber-600 text-neutral-950 shadow'
-                  : 'text-neutral-400 hover:text-neutral-200'
+                  : 'text-neutral-300 hover:text-white'
               }`}
             >
               {!isDirectorUnlocked && <Lock className="h-3 w-3 text-amber-400" />}
@@ -1761,7 +1748,6 @@ export default function VideoProgressApp() {
       </header>
 
       <main className="mx-auto max-w-[1400px] px-6 py-5">
-        {/* 全体統計 */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryCard label="進行中の案件" value={summary.activeCount} tone="default" />
           <SummaryCard
@@ -1778,12 +1764,10 @@ export default function VideoProgressApp() {
           <SummaryCard label="修正関連対応中" value={summary.revisionCount} tone="default" />
         </div>
 
-        {/* ディレクター管理パネル */}
         {viewMode === 'director' && isDirectorUnlocked && (
           <DirectorPanel editorWorkload={editorWorkload} clientProgress={clientProgress} />
         )}
 
-        {/* 表示モードに応じたビュー描画 */}
         {viewMode === 'client' ? (
           <ClientTableView
             projects={filteredProjects}
@@ -1817,7 +1801,6 @@ export default function VideoProgressApp() {
         )}
       </main>
 
-      {/* 一括操作バー ＆ モーダル */}
       <BulkActionModal
         selectedCount={selectedIds.length}
         onClearSelection={() => setSelectedIds([])}
@@ -1827,7 +1810,6 @@ export default function VideoProgressApp() {
         directorsList={['望月']}
       />
 
-      {/* パスワード入力モーダル */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
           <div className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-2xl">
@@ -1835,7 +1817,7 @@ export default function VideoProgressApp() {
               <Lock className="h-5 w-5" />
               <h2 className="text-base font-bold text-neutral-100">ディレクター用画面の保護</h2>
             </div>
-            <p className="mb-4 text-xs text-neutral-400">
+            <p className="mb-4 text-xs text-neutral-300 font-medium">
               暗証番号を入力してディレクター用管理パネルを開放してください。
             </p>
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -1846,23 +1828,23 @@ export default function VideoProgressApp() {
                   onChange={(e) => setInputPassword(e.target.value)}
                   placeholder="パスワードを入力"
                   autoFocus
-                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-amber-500 focus:outline-none"
+                  className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-neutral-100 focus:border-amber-500 focus:outline-none font-medium"
                 />
                 {passwordError && (
-                  <p className="mt-1.5 text-xs text-rose-400">{passwordError}</p>
+                  <p className="mt-1.5 text-xs text-rose-400 font-semibold">{passwordError}</p>
                 )}
               </div>
               <div className="flex justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowPasswordModal(false)}
-                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:border-neutral-500"
+                  className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs font-semibold text-neutral-300 hover:border-neutral-500"
                 >
                   キャンセル
                 </button>
                 <button
                   type="submit"
-                  className="rounded-md bg-amber-600 px-4 py-1.5 text-xs font-semibold text-neutral-950 hover:bg-amber-500"
+                  className="rounded-md bg-amber-600 px-4 py-1.5 text-xs font-bold text-neutral-950 hover:bg-amber-500"
                 >
                   解除する
                 </button>
@@ -1899,13 +1881,13 @@ function SummaryCard({
 }) {
   const toneClass = {
     default: 'text-neutral-100',
-    danger: 'text-rose-400',
-    warn: 'text-amber-400',
+    danger: 'text-rose-400 font-bold',
+    warn: 'text-amber-300 font-bold',
   }[tone];
 
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3.5">
-      <p className="mb-1.5 flex items-center gap-1 text-[11px] text-neutral-500">
+      <p className="mb-1.5 flex items-center gap-1 text-[11px] text-neutral-300 font-semibold">
         {icon}
         {label}
       </p>
