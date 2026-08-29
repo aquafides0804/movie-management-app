@@ -13,7 +13,6 @@ import {
   Clock,
   Copy,
   ExternalLink,
-  Filter,
   HardDrive,
   Lock,
   MessageSquareText,
@@ -65,6 +64,7 @@ interface Project {
   draftSubmittedDate: string | null;
   clientSubmittedDate: string | null;
   revisionCompletedDate: string | null;
+  deliveredDate: string | null;
   priority: 0 | 1 | 2;
   revisionNote: string | null;
   links: ProjectLink[];
@@ -89,6 +89,7 @@ interface ProjectFormData {
   draftSubmittedDate: string;
   clientSubmittedDate: string;
   revisionCompletedDate: string;
+  deliveredDate: string;
   priority: 0 | 1 | 2;
   revisionNote: string;
   googleDriveUrl: string;
@@ -259,6 +260,7 @@ function emptyFormData(): ProjectFormData {
     draftSubmittedDate: '',
     clientSubmittedDate: '',
     revisionCompletedDate: '',
+    deliveredDate: '',
     priority: 0,
     revisionNote: '',
     googleDriveUrl: '',
@@ -284,6 +286,7 @@ function projectToFormData(p: Project): ProjectFormData {
     draftSubmittedDate: p.draftSubmittedDate ?? '',
     clientSubmittedDate: p.clientSubmittedDate ?? '',
     revisionCompletedDate: p.revisionCompletedDate ?? '',
+    deliveredDate: p.deliveredDate ?? '',
     priority: p.priority,
     revisionNote: p.revisionNote ?? '',
     googleDriveUrl: findUrl('google_drive'),
@@ -330,6 +333,7 @@ function mapDbToProject(row: any): Project {
     draftSubmittedDate: row.draft_submitted_date || null,
     clientSubmittedDate: row.client_submitted_date || null,
     revisionCompletedDate: row.revision_completed_date || null,
+    deliveredDate: row.delivered_date || null,
     priority: row.priority ?? 0,
     revisionNote: row.revision_note || row.description || null,
     links: Array.isArray(row.links) ? row.links : [],
@@ -351,6 +355,7 @@ function mapProjectToDb(p: Partial<Project>, descriptionText?: string) {
     draft_submitted_date: p.draftSubmittedDate,
     client_submitted_date: p.clientSubmittedDate,
     revision_completed_date: p.revisionCompletedDate,
+    delivered_date: p.deliveredDate,
     priority: p.priority,
     revision_note: p.revisionNote,
     description: descriptionText || p.revisionNote,
@@ -511,6 +516,7 @@ function ProjectCard({
         />
         <PlainDateRow label="CL提出日" dateStr={project.clientSubmittedDate} isLight={isLight} />
         <PlainDateRow label="修正完了日" dateStr={project.revisionCompletedDate} isLight={isLight} />
+        <PlainDateRow label="納品日" dateStr={project.deliveredDate} isLight={isLight} />
         {hasGigafileAlert && (
           <div className="flex items-center gap-1.5 rounded bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 border border-rose-200">
             <AlertTriangle className="h-3 w-3 text-rose-600" />
@@ -640,7 +646,6 @@ function ClientTableView({
   const currentClient = selectedClient === 'all' && clientNames.length > 0 ? clientNames[0] : selectedClient;
   const rawClientProjects = projects.filter((p) => p.clientName === currentClient);
 
-  // 絞り込み処理
   const clientProjects = useMemo(() => {
     return rawClientProjects.filter((p) => {
       if (selectedEditor !== 'all') {
@@ -689,7 +694,6 @@ function ClientTableView({
               </select>
             </div>
 
-            {/* テーブル用：担当編集者フィルター */}
             <div className="flex items-center gap-1.5 border-l pl-3 border-slate-200">
               <span className={`text-xs font-bold ${isLight ? 'text-slate-700' : 'text-neutral-300'}`}>担当編集者:</span>
               <select
@@ -707,7 +711,6 @@ function ClientTableView({
               </select>
             </div>
 
-            {/* テーブル用：ステータスフィルター */}
             <div className="flex items-center gap-1.5 border-l pl-3 border-slate-200">
               <span className={`text-xs font-bold ${isLight ? 'text-slate-700' : 'text-neutral-300'}`}>ステータス:</span>
               <select
@@ -766,6 +769,7 @@ function ClientTableView({
               <th className="p-3">担当編集者</th>
               <th className="p-3">ステータス</th>
               <th className="p-3">CL提出日</th>
+              <th className="p-3">納品日</th>
               <th className="p-3">期日アラート</th>
               <th className="p-3 text-center">Googleドライブ</th>
             </tr>
@@ -773,7 +777,7 @@ function ClientTableView({
           <tbody className={`divide-y ${isLight ? 'divide-slate-100 text-slate-800' : 'divide-neutral-800/80 text-neutral-200'}`}>
             {clientProjects.length === 0 ? (
               <tr>
-                <td colSpan={7} className={`p-8 text-center font-medium ${isLight ? 'text-slate-400' : 'text-neutral-400'}`}>
+                <td colSpan={8} className={`p-8 text-center font-medium ${isLight ? 'text-slate-400' : 'text-neutral-400'}`}>
                   条件に一致する案件はありません
                 </td>
               </tr>
@@ -822,6 +826,9 @@ function ClientTableView({
                     </td>
                     <td className="p-3 font-semibold">
                       {formatDateShort(project.clientSubmittedDate || project.draftDueDate)}
+                    </td>
+                    <td className="p-3 font-semibold text-emerald-600">
+                      {formatDateShort(project.deliveredDate)}
                     </td>
                     <td className="p-3">
                       {hasAlert ? (
@@ -1339,6 +1346,12 @@ function ProjectFormModal({
                 onChange={(v) => update('revisionCompletedDate', v)}
                 isLight={isLight}
               />
+              <DateField
+                label="納品日"
+                value={form.deliveredDate}
+                onChange={(v) => update('deliveredDate', v)}
+                isLight={isLight}
+              />
               <div>
                 <label className={labelClass}>優先度</label>
                 <select
@@ -1653,6 +1666,7 @@ export default function VideoProgressApp() {
         draftSubmittedDate: data.draftSubmittedDate || null,
         clientSubmittedDate: data.clientSubmittedDate || null,
         revisionCompletedDate: data.revisionCompletedDate || null,
+        deliveredDate: data.deliveredDate || null,
         priority: data.priority,
         revisionNote: data.revisionNote.trim() || null,
         links,
@@ -1693,6 +1707,7 @@ export default function VideoProgressApp() {
         draftSubmittedDate: data.draftSubmittedDate || null,
         clientSubmittedDate: data.clientSubmittedDate || null,
         revisionCompletedDate: data.revisionCompletedDate || null,
+        deliveredDate: data.deliveredDate || null,
         priority: data.priority,
         revisionNote: data.revisionNote.trim() || null,
         links,
