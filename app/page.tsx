@@ -13,6 +13,7 @@ import {
   Clock,
   Copy,
   ExternalLink,
+  Filter,
   HardDrive,
   Lock,
   MessageSquareText,
@@ -613,6 +614,7 @@ function PlainDateRow({ label, dateStr, isLight }: { label: string; dateStr: str
 function ClientTableView({
   projects,
   clientNames,
+  editorNames,
   selectedClient,
   isLight,
   onSelectClient,
@@ -623,6 +625,7 @@ function ClientTableView({
 }: {
   projects: Project[];
   clientNames: string[];
+  editorNames: string[];
   selectedClient: string;
   isLight: boolean;
   onSelectClient: (c: string) => void;
@@ -631,40 +634,100 @@ function ClientTableView({
   selectedIds: string[];
   onToggleSelect: (id: string) => void;
 }) {
-  const currentClient = selectedClient === 'all' && clientNames.length > 0 ? clientNames[0] : selectedClient;
-  const clientProjects = projects.filter((p) => p.clientName === currentClient);
+  const [selectedEditor, setSelectedEditor] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  const totalCount = clientProjects.length;
-  const deliveredCount = clientProjects.filter((p) => p.status === 'delivered').length;
+  const currentClient = selectedClient === 'all' && clientNames.length > 0 ? clientNames[0] : selectedClient;
+  const rawClientProjects = projects.filter((p) => p.clientName === currentClient);
+
+  // 絞り込み処理
+  const clientProjects = useMemo(() => {
+    return rawClientProjects.filter((p) => {
+      if (selectedEditor !== 'all') {
+        if (selectedEditor === 'unassigned') {
+          if (p.mainEditor) return false;
+        } else if (p.mainEditor !== selectedEditor) {
+          return false;
+        }
+      }
+      if (selectedStatus !== 'all' && p.status !== selectedStatus) {
+        return false;
+      }
+      return true;
+    });
+  }, [rawClientProjects, selectedEditor, selectedStatus]);
+
+  const totalCount = rawClientProjects.length;
+  const deliveredCount = rawClientProjects.filter((p) => p.status === 'delivered').length;
   const activeCount = totalCount - deliveredCount;
-  const overdueCount = clientProjects.filter(projectHasAlert).length;
+  const overdueCount = rawClientProjects.filter(projectHasAlert).length;
   const rate = totalCount > 0 ? Math.round((deliveredCount / totalCount) * 100) : 0;
 
   const bgCard = isLight ? 'bg-white border-slate-200' : 'bg-neutral-900 border-neutral-800';
+  const selectClass = `rounded-md border px-2.5 py-1 text-xs font-bold focus:border-amber-500 focus:outline-none ${
+    isLight ? 'border-slate-300 bg-white text-slate-800' : 'border-neutral-700 bg-neutral-950 text-neutral-100'
+  }`;
 
   return (
     <div className="space-y-4">
       <div className={`rounded-lg border p-4 ${bgCard}`}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-amber-600" />
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>クライアント選択:</span>
-            <select
-              value={currentClient}
-              onChange={(e) => onSelectClient(e.target.value)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-bold focus:border-amber-500 focus:outline-none ${isLight ? 'border-slate-300 bg-white text-slate-800' : 'border-neutral-700 bg-neutral-950 text-neutral-100'}`}
-            >
-              {clientNames.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-amber-600" />
+              <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>クライアント選択:</span>
+              <select
+                value={currentClient}
+                onChange={(e) => onSelectClient(e.target.value)}
+                className={selectClass}
+              >
+                {clientNames.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* テーブル用：担当編集者フィルター */}
+            <div className="flex items-center gap-1.5 border-l pl-3 border-slate-200">
+              <span className={`text-xs font-bold ${isLight ? 'text-slate-700' : 'text-neutral-300'}`}>担当編集者:</span>
+              <select
+                value={selectedEditor}
+                onChange={(e) => setSelectedEditor(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">全員</option>
+                <option value="unassigned">未割り当て</option>
+                {editorNames.map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* テーブル用：ステータスフィルター */}
+            <div className="flex items-center gap-1.5 border-l pl-3 border-slate-200">
+              <span className={`text-xs font-bold ${isLight ? 'text-slate-700' : 'text-neutral-300'}`}>ステータス:</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className={selectClass}
+              >
+                <option value="all">全ステータス</option>
+                {STATUS_ORDER.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_CONFIG[s].label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 text-xs font-medium">
             <div className={isLight ? 'text-slate-600' : 'text-neutral-300'}>
-              全 <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-neutral-100'}`}>{totalCount}</span> 件
+              表示中 <span className={`font-bold ${isLight ? 'text-slate-900' : 'text-neutral-100'}`}>{clientProjects.length}</span> / {totalCount} 件
             </div>
             <div className={isLight ? 'text-slate-600' : 'text-neutral-300'}>
               進行中 <span className="font-bold text-amber-600">{activeCount}</span> 件
@@ -711,7 +774,7 @@ function ClientTableView({
             {clientProjects.length === 0 ? (
               <tr>
                 <td colSpan={7} className={`p-8 text-center font-medium ${isLight ? 'text-slate-400' : 'text-neutral-400'}`}>
-                  このクライアントの案件はありません
+                  条件に一致する案件はありません
                 </td>
               </tr>
             ) : (
@@ -1846,6 +1909,7 @@ export default function VideoProgressApp() {
           <ClientTableView
             projects={filteredProjects}
             clientNames={clientNames}
+            editorNames={editorNames}
             selectedClient={selectedClientView}
             isLight={isLight}
             onSelectClient={setSelectedClientView}
