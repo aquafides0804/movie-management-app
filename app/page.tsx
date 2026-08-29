@@ -498,17 +498,17 @@ function ProjectCard({
       </div>
 
       <div className={`mb-3 space-y-1.5 border-t pt-2 ${isLight ? 'border-slate-100' : 'border-neutral-800/80'}`}>
-        <DueRow icon={<Clock className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />} label="締め切り日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} isLight={isLight} />
+        <DueRow icon={<Clock className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />} label="編集者締切日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} isLight={isLight} />
         <DueRow
           icon={<Calendar className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />}
-          label="初稿提出期日"
+          label="Dir締切日"
           dateStr={project.draftDueDate}
           badge={draftDue}
           done={draftDone}
           suppressAlert={!isWorkInPhase}
           isLight={isLight}
         />
-        <PlainDateRow label="先方提出日(CL)" dateStr={project.clientSubmittedDate} isLight={isLight} />
+        <PlainDateRow label="CL提出日" dateStr={project.clientSubmittedDate} isLight={isLight} />
         <PlainDateRow label="修正完了日" dateStr={project.revisionCompletedDate} isLight={isLight} />
         {hasGigafileAlert && (
           <div className="flex items-center gap-1.5 rounded bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 border border-rose-200">
@@ -702,7 +702,7 @@ function ClientTableView({
               <th className="p-3">案件名 / タイトル</th>
               <th className="p-3">担当編集者</th>
               <th className="p-3">ステータス</th>
-              <th className="p-3">先方提出日(CL)</th>
+              <th className="p-3">CL提出日</th>
               <th className="p-3">期日アラート</th>
               <th className="p-3 text-center">Googleドライブ</th>
             </tr>
@@ -1245,14 +1245,14 @@ function ProjectFormModal({
             </p>
             <div className="grid grid-cols-2 gap-3">
               <DateField
-                label="締め切り日"
+                label="編集者締切日"
                 value={form.internalDueDate}
                 onChange={(v) => update('internalDueDate', v)}
                 accent
                 isLight={isLight}
               />
               <DateField
-                label="初稿提出期日"
+                label="Dir締切日"
                 value={form.draftDueDate}
                 onChange={(v) => update('draftDueDate', v)}
                 accent
@@ -1265,7 +1265,7 @@ function ProjectFormModal({
                 isLight={isLight}
               />
               <DateField
-                label="先方提出日（CL提出日）"
+                label="CL提出日"
                 value={form.clientSubmittedDate}
                 onChange={(v) => update('clientSubmittedDate', v)}
                 isLight={isLight}
@@ -1363,7 +1363,7 @@ function ProjectFormModal({
 }
 
 export default function VideoProgressApp() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('light'); // 初期設定をライトモードに設定
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
