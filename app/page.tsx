@@ -28,6 +28,7 @@ import {
   LayoutGrid,
   Sun,
   Moon,
+  Filter,
 } from 'lucide-react';
 
 const DIRECTOR_PASSWORD = '0531';
@@ -732,8 +733,15 @@ function ClientTableView({
   const [selectedEditor, setSelectedEditor] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  const currentClient = selectedClient === 'all' && clientNames.length > 0 ? clientNames[0] : selectedClient;
-  const rawClientProjects = projects.filter((p) => p.clientName === currentClient);
+  // 日付フィルター状態
+  const [dateFieldType, setDateFieldType] = useState<'deliveredDate' | 'clientSubmittedDate' | 'none'>('none');
+  const [targetDate, setTargetDate] = useState<string>('');
+  const [dateCondition, setDateCondition] = useState<'exact' | 'before' | 'after'>('exact');
+
+  const rawClientProjects = useMemo(() => {
+    if (selectedClient === 'all') return projects;
+    return projects.filter((p) => p.clientName === selectedClient);
+  }, [projects, selectedClient]);
 
   const clientProjects = useMemo(() => {
     return rawClientProjects.filter((p) => {
@@ -747,9 +755,20 @@ function ClientTableView({
       if (selectedStatus !== 'all' && p.status !== selectedStatus) {
         return false;
       }
+
+      // 日付フィルター判定
+      if (dateFieldType !== 'none' && targetDate) {
+        const val = dateFieldType === 'deliveredDate' ? p.deliveredDate : p.clientSubmittedDate;
+        if (!val) return false;
+
+        if (dateCondition === 'exact' && val !== targetDate) return false;
+        if (dateCondition === 'before' && val > targetDate) return false;
+        if (dateCondition === 'after' && val < targetDate) return false;
+      }
+
       return true;
     });
-  }, [rawClientProjects, selectedEditor, selectedStatus]);
+  }, [rawClientProjects, selectedEditor, selectedStatus, dateFieldType, targetDate, dateCondition]);
 
   const totalCount = rawClientProjects.length;
   const deliveredCount = rawClientProjects.filter((p) => p.status === 'delivered').length;
@@ -771,10 +790,11 @@ function ClientTableView({
               <Building2 className="h-4 w-4 text-amber-600" />
               <span className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>クライアント選択:</span>
               <select
-                value={currentClient}
+                value={selectedClient}
                 onChange={(e) => onSelectClient(e.target.value)}
                 className={selectClass}
               >
+                <option value="all">全クライアント（すべて表示）</option>
                 {clientNames.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -835,7 +855,63 @@ function ClientTableView({
           </div>
         </div>
 
-        <div className="space-y-1">
+        {/* 日付フィルターエリア */}
+        <div className={`flex flex-wrap items-center gap-2 border-t pt-3 ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
+            <Filter className="h-3.5 w-3.5" />
+            <span>日付絞り込み:</span>
+          </div>
+
+          <select
+            value={dateFieldType}
+            onChange={(e) => setDateFieldType(e.target.value as any)}
+            className={selectClass}
+          >
+            <option value="none">指定なし</option>
+            <option value="deliveredDate">納品日</option>
+            <option value="clientSubmittedDate">CL提出日</option>
+          </select>
+
+          {dateFieldType !== 'none' && (
+            <>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => setTargetDate(e.target.value)}
+                className={`rounded-md border px-2 py-1 text-xs font-bold focus:outline-none ${
+                  isLight
+                    ? 'border-slate-300 bg-white text-slate-800 [color-scheme:light]'
+                    : 'border-neutral-700 bg-neutral-950 text-neutral-100 [color-scheme:dark]'
+                }`}
+              />
+
+              <select
+                value={dateCondition}
+                onChange={(e) => setDateCondition(e.target.value as any)}
+                className={selectClass}
+              >
+                <option value="exact">指定日ぴったり</option>
+                <option value="before">指定日以前（過去含む）</option>
+                <option value="after">指定日以降（未来含む）</option>
+              </select>
+
+              {targetDate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDateFieldType('none');
+                    setTargetDate('');
+                  }}
+                  className={`rounded px-2 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 ${isLight ? 'border border-rose-200' : 'bg-neutral-800'}`}
+                >
+                  日付条件クリア
+                </button>
+              )}
+            </>
+          )}
+        </div>
+
+        <div className="space-y-1 mt-3">
           <div className={`flex justify-between text-[11px] font-medium ${isLight ? 'text-slate-600' : 'text-neutral-300'}`}>
             <span>納品完了率</span>
             <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-neutral-100'}`}>{rate}%</span>
