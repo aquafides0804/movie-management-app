@@ -252,7 +252,7 @@ function emptyFormData(): ProjectFormData {
     title: '',
     status: 'not_started',
     mainEditor: '',
-    director: '',
+    director: '望月',
     internalDueDate: '',
     draftDueDate: '',
     draftSubmittedDate: '',
@@ -377,6 +377,7 @@ function ProjectCard({
   isSelected,
   isLight,
   editorNames,
+  directorNames,
   onToggleSelect,
   onStatusChange,
   onQuickUpdate,
@@ -388,6 +389,7 @@ function ProjectCard({
   isSelected: boolean;
   isLight: boolean;
   editorNames: string[];
+  directorNames: string[];
   onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
   onQuickUpdate: (id: string, fields: Partial<Project>) => void;
@@ -412,6 +414,10 @@ function ProjectCard({
   const textTitle = isLight ? 'text-slate-900 hover:text-amber-600' : 'text-neutral-100 hover:text-amber-400';
   const textClient = isLight ? 'text-amber-700' : 'text-amber-300';
   const badgeStyle = isLight ? statusConfig.badgeLight : statusConfig.badgeDark;
+
+  const selectStyle = `w-full bg-transparent text-xs font-bold focus:outline-none cursor-pointer ${
+    isLight ? 'text-slate-800' : 'text-neutral-100'
+  }`;
 
   return (
     <div
@@ -498,27 +504,37 @@ function ProjectCard({
         )}
       </div>
 
-      {/* インライン編集：編集者 & Dir */}
+      {/* ドロップダウン選択：編集者 & Dir */}
       <div className="mb-3 grid grid-cols-2 gap-1.5 text-xs">
         <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950'}`}>
-          <span className="text-[10px] text-slate-400 font-semibold">編集:</span>
-          <input
-            type="text"
+          <span className="text-[10px] text-slate-400 font-semibold shrink-0">編集:</span>
+          <select
             value={project.mainEditor || ''}
             onChange={(e) => onQuickUpdate(project.id, { mainEditor: e.target.value })}
-            placeholder="未割当"
-            className={`w-full bg-transparent text-xs font-bold focus:outline-none ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}
-          />
+            className={selectStyle}
+          >
+            <option value="">未割当</option>
+            {editorNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950'}`}>
-          <span className="text-[10px] text-slate-400 font-semibold">Dir:</span>
-          <input
-            type="text"
+          <span className="text-[10px] text-slate-400 font-semibold shrink-0">Dir:</span>
+          <select
             value={project.director || ''}
             onChange={(e) => onQuickUpdate(project.id, { director: e.target.value })}
-            placeholder="未割当"
-            className={`w-full bg-transparent text-xs font-bold focus:outline-none ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}
-          />
+            className={selectStyle}
+          >
+            <option value="">未割当</option>
+            {directorNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -1069,6 +1085,7 @@ function KanbanBoard({
   selectedIds,
   isLight,
   editorNames,
+  directorNames,
   onToggleSelect,
   onStatusChange,
   onQuickUpdate,
@@ -1080,6 +1097,7 @@ function KanbanBoard({
   selectedIds: string[];
   isLight: boolean;
   editorNames: string[];
+  directorNames: string[];
   onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
   onQuickUpdate: (id: string, fields: Partial<Project>) => void;
@@ -1126,6 +1144,7 @@ function KanbanBoard({
                     isSelected={selectedIds.includes(project.id)}
                     isLight={isLight}
                     editorNames={editorNames}
+                    directorNames={directorNames}
                     onToggleSelect={onToggleSelect}
                     onStatusChange={onStatusChange}
                     onQuickUpdate={onQuickUpdate}
@@ -1270,12 +1289,16 @@ function ProjectFormModal({
   initial,
   isEdit,
   isLight,
+  editorNames,
+  directorNames,
   onSave,
   onClose,
 }: {
   initial: ProjectFormData;
   isEdit: boolean;
   isLight: boolean;
+  editorNames: string[];
+  directorNames: string[];
   onSave: (data: ProjectFormData) => void;
   onClose: () => void;
 }) {
@@ -1356,21 +1379,33 @@ function ProjectFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>メイン担当者（編集者）</label>
-              <input
+              <select
                 className={inputClass}
                 value={form.mainEditor}
                 onChange={(e) => update('mainEditor', e.target.value)}
-                placeholder="例: 山田"
-              />
+              >
+                <option value="">未割当</option>
+                {editorNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className={labelClass}>ディレクター</label>
-              <input
+              <select
                 className={inputClass}
                 value={form.director}
                 onChange={(e) => update('director', e.target.value)}
-                placeholder="例: 望月"
-              />
+              >
+                <option value="">未割当</option>
+                {directorNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -1679,7 +1714,6 @@ export default function VideoProgressApp() {
     }
   }
 
-  // カンバンカード等からのクイック更新処理
   async function handleQuickUpdate(id: string, fields: Partial<Project>) {
     setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...fields } : p)));
 
@@ -1833,11 +1867,14 @@ export default function VideoProgressApp() {
     () => Array.from(new Set(projects.map((p) => p.clientName).filter(Boolean))).sort(),
     [projects]
   );
+
   const editorNames = useMemo(
-    () =>
-      Array.from(
-        new Set(projects.flatMap((p) => [p.mainEditor, p.director]).filter(Boolean))
-      ).sort(),
+    () => Array.from(new Set(['金本さん', '中山さん', '内田', '山田', ...projects.map((p) => p.mainEditor).filter(Boolean)])).sort(),
+    [projects]
+  );
+
+  const directorNames = useMemo(
+    () => Array.from(new Set(['望月', ...projects.map((p) => p.director).filter(Boolean)])).sort(),
     [projects]
   );
 
@@ -2033,6 +2070,7 @@ export default function VideoProgressApp() {
               selectedIds={selectedIds}
               isLight={isLight}
               editorNames={editorNames}
+              directorNames={directorNames}
               onToggleSelect={handleToggleSelect}
               onStatusChange={handleStatusChange}
               onQuickUpdate={handleQuickUpdate}
@@ -2050,7 +2088,7 @@ export default function VideoProgressApp() {
         onApplyBulkUpdate={handleApplyBulkUpdate}
         onBulkDelete={handleBulkDelete}
         editorsList={editorNames}
-        directorsList={['望月']}
+        directorsList={directorNames}
       />
 
       {showPasswordModal && (
@@ -2101,6 +2139,8 @@ export default function VideoProgressApp() {
         <ProjectFormModal
           isEdit={modalState.mode === 'edit'}
           isLight={isLight}
+          editorNames={editorNames}
+          directorNames={directorNames}
           initial={modalState.mode === 'edit' ? projectToFormData(modalState.project) : emptyFormData()}
           onSave={handleSaveProject}
           onClose={() => setModalState(null)}
