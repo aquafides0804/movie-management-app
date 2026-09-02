@@ -80,7 +80,6 @@ interface DashboardFilters {
 interface ProjectFormData {
   clientName: string;
   title: string;
-  fileName: string;
   status: ProjectStatus;
   mainEditor: string;
   director: string;
@@ -251,7 +250,6 @@ function emptyFormData(): ProjectFormData {
   return {
     clientName: '',
     title: '',
-    fileName: '',
     status: 'not_started',
     mainEditor: '',
     director: '',
@@ -277,7 +275,6 @@ function projectToFormData(p: Project): ProjectFormData {
   return {
     clientName: p.clientName,
     title: p.title,
-    fileName: p.fileName,
     status: p.status,
     mainEditor: p.mainEditor,
     director: p.director,
@@ -324,7 +321,7 @@ function mapDbToProject(row: any): Project {
     id: row.id,
     clientName: row.client_name || row.title || '未設定',
     title: row.title || '',
-    fileName: row.file_name || '',
+    fileName: row.file_name || row.title || '',
     status: (status as ProjectStatus) || 'not_started',
     mainEditor: row.main_editor || row.assignee || '',
     director: row.director || '',
@@ -344,7 +341,7 @@ function mapProjectToDb(p: Partial<Project>, descriptionText?: string) {
   return {
     client_name: p.clientName,
     title: p.title,
-    file_name: p.fileName,
+    file_name: p.fileName || p.title,
     status: p.status,
     main_editor: p.mainEditor,
     assignee: p.mainEditor,
@@ -379,8 +376,10 @@ function ProjectCard({
   project,
   isSelected,
   isLight,
+  editorNames,
   onToggleSelect,
   onStatusChange,
+  onQuickUpdate,
   onCopyLink,
   onEdit,
   onDelete,
@@ -388,8 +387,10 @@ function ProjectCard({
   project: Project;
   isSelected: boolean;
   isLight: boolean;
+  editorNames: string[];
   onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
+  onQuickUpdate: (id: string, fields: Partial<Project>) => void;
   onCopyLink: (url: string, label: string) => void;
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
@@ -410,7 +411,6 @@ function ProjectCard({
   const bgCard = isLight ? 'bg-white border-slate-200' : 'bg-neutral-900 border-neutral-800';
   const textTitle = isLight ? 'text-slate-900 hover:text-amber-600' : 'text-neutral-100 hover:text-amber-400';
   const textClient = isLight ? 'text-amber-700' : 'text-amber-300';
-  const textSub = isLight ? 'text-slate-600' : 'text-neutral-300';
   const badgeStyle = isLight ? statusConfig.badgeLight : statusConfig.badgeDark;
 
   return (
@@ -446,7 +446,7 @@ function ProjectCard({
             type="button"
             onClick={() => onEdit(project)}
             className={`rounded p-1 ${isLight ? 'text-slate-400 hover:bg-slate-100 hover:text-slate-700' : 'text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100'}`}
-            aria-label="編集"
+            aria-label="詳細編集"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
@@ -498,14 +498,42 @@ function ProjectCard({
         )}
       </div>
 
-      <div className={`mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs ${textSub}`}>
-        <span>編集: <strong className={isLight ? 'text-slate-900 font-semibold' : 'text-neutral-100 font-medium'}>{project.mainEditor || '未割当'}</strong></span>
-        <span>Dir: <strong className={isLight ? 'text-slate-900 font-semibold' : 'text-neutral-100 font-medium'}>{project.director || '未割当'}</strong></span>
+      {/* インライン編集：編集者 & Dir */}
+      <div className="mb-3 grid grid-cols-2 gap-1.5 text-xs">
+        <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950'}`}>
+          <span className="text-[10px] text-slate-400 font-semibold">編集:</span>
+          <input
+            type="text"
+            value={project.mainEditor || ''}
+            onChange={(e) => onQuickUpdate(project.id, { mainEditor: e.target.value })}
+            placeholder="未割当"
+            className={`w-full bg-transparent text-xs font-bold focus:outline-none ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}
+          />
+        </div>
+        <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950'}`}>
+          <span className="text-[10px] text-slate-400 font-semibold">Dir:</span>
+          <input
+            type="text"
+            value={project.director || ''}
+            onChange={(e) => onQuickUpdate(project.id, { director: e.target.value })}
+            placeholder="未割当"
+            className={`w-full bg-transparent text-xs font-bold focus:outline-none ${isLight ? 'text-slate-800' : 'text-neutral-100'}`}
+          />
+        </div>
       </div>
 
+      {/* インライン編集：日付群 */}
       <div className={`mb-3 space-y-1.5 border-t pt-2 ${isLight ? 'border-slate-100' : 'border-neutral-800/80'}`}>
-        <DueRow icon={<Clock className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />} label="編集者締切日" dateStr={project.internalDueDate} badge={internalDue} suppressAlert={!isWorkInPhase} isLight={isLight} />
-        <DueRow
+        <InlineDueRow
+          icon={<Clock className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />}
+          label="編集者締切日"
+          dateStr={project.internalDueDate}
+          badge={internalDue}
+          suppressAlert={!isWorkInPhase}
+          isLight={isLight}
+          onChangeDate={(val) => onQuickUpdate(project.id, { internalDueDate: val })}
+        />
+        <InlineDueRow
           icon={<Calendar className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />}
           label="Dir締切日"
           dateStr={project.draftDueDate}
@@ -513,10 +541,27 @@ function ProjectCard({
           done={draftDone}
           suppressAlert={!isWorkInPhase}
           isLight={isLight}
+          onChangeDate={(val) => onQuickUpdate(project.id, { draftDueDate: val })}
         />
-        <PlainDateRow label="CL提出日" dateStr={project.clientSubmittedDate} isLight={isLight} />
-        <PlainDateRow label="修正完了日" dateStr={project.revisionCompletedDate} isLight={isLight} />
-        <PlainDateRow label="納品日" dateStr={project.deliveredDate} isLight={isLight} />
+        <InlinePlainDateRow
+          label="CL提出日"
+          dateStr={project.clientSubmittedDate}
+          isLight={isLight}
+          onChangeDate={(val) => onQuickUpdate(project.id, { clientSubmittedDate: val })}
+        />
+        <InlinePlainDateRow
+          label="修正完了日"
+          dateStr={project.revisionCompletedDate}
+          isLight={isLight}
+          onChangeDate={(val) => onQuickUpdate(project.id, { revisionCompletedDate: val })}
+        />
+        <InlinePlainDateRow
+          label="納品日"
+          dateStr={project.deliveredDate}
+          isLight={isLight}
+          onChangeDate={(val) => onQuickUpdate(project.id, { deliveredDate: val })}
+        />
+
         {hasGigafileAlert && (
           <div className="flex items-center gap-1.5 rounded bg-rose-50 px-2 py-1 text-[11px] font-semibold text-rose-700 border border-rose-200">
             <AlertTriangle className="h-3 w-3 text-rose-600" />
@@ -567,7 +612,7 @@ function ProjectCard({
   );
 }
 
-function DueRow({
+function InlineDueRow({
   icon,
   label,
   dateStr,
@@ -575,6 +620,7 @@ function DueRow({
   done,
   suppressAlert = false,
   isLight,
+  onChangeDate,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -583,6 +629,7 @@ function DueRow({
   done?: boolean;
   suppressAlert?: boolean;
   isLight: boolean;
+  onChangeDate: (val: string | null) => void;
 }) {
   const level = (done || suppressAlert) ? 'normal' : badge.level;
   const levelStyle = {
@@ -596,23 +643,49 @@ function DueRow({
 
   return (
     <div className="flex items-center justify-between text-[11px]">
-      <span className={`flex items-center gap-1.5 font-medium ${isLight ? 'text-slate-600' : 'text-neutral-300'}`}>
+      <span className={`flex items-center gap-1 font-medium ${isLight ? 'text-slate-600' : 'text-neutral-300'}`}>
         {icon}
-        {label}
-        <span className={`font-semibold ${isLight ? 'text-slate-900' : 'text-neutral-200'}`}>{formatDateShort(dateStr)}</span>
+        <span className="w-16">{label}</span>
+        <input
+          type="date"
+          value={dateStr || ''}
+          onChange={(e) => onChangeDate(e.target.value || null)}
+          className={`rounded border px-1 py-0.5 text-[11px] font-bold focus:outline-none ${
+            isLight
+              ? 'border-slate-200 bg-white text-slate-900 hover:border-amber-400 [color-scheme:light]'
+              : 'border-neutral-700 bg-neutral-950 text-neutral-100 hover:border-amber-400 [color-scheme:dark]'
+          }`}
+        />
       </span>
       <span className={`font-semibold ${levelStyle}`}>{displayBadgeText}</span>
     </div>
   );
 }
 
-function PlainDateRow({ label, dateStr, isLight }: { label: string; dateStr: string | null; isLight: boolean }) {
+function InlinePlainDateRow({
+  label,
+  dateStr,
+  isLight,
+  onChangeDate,
+}: {
+  label: string;
+  dateStr: string | null;
+  isLight: boolean;
+  onChangeDate: (val: string | null) => void;
+}) {
   return (
     <div className={`flex items-center justify-between text-[11px] font-medium ${isLight ? 'text-slate-600' : 'text-neutral-300'}`}>
       <span>{label}</span>
-      <span className={dateStr ? (isLight ? 'text-slate-900 font-semibold' : 'text-neutral-100 font-semibold') : (isLight ? 'text-slate-400' : 'text-neutral-400')}>
-        {formatDateShort(dateStr)}
-      </span>
+      <input
+        type="date"
+        value={dateStr || ''}
+        onChange={(e) => onChangeDate(e.target.value || null)}
+        className={`rounded border px-1 py-0.5 text-[11px] font-bold focus:outline-none ${
+          isLight
+            ? 'border-slate-200 bg-white text-slate-900 hover:border-amber-400 [color-scheme:light]'
+            : 'border-neutral-700 bg-neutral-950 text-neutral-100 hover:border-amber-400 [color-scheme:dark]'
+        }`}
+      />
     </div>
   );
 }
@@ -810,9 +883,6 @@ function ClientTableView({
                         {project.title}
                         <Pencil className="h-3 w-3 text-slate-400" />
                       </button>
-                      {project.fileName && (
-                        <p className={`text-[10px] font-medium ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>{project.fileName}</p>
-                      )}
                     </td>
                     <td className="p-3 font-semibold">
                       {project.mainEditor || '未割り当て'}
@@ -998,8 +1068,10 @@ function KanbanBoard({
   projects,
   selectedIds,
   isLight,
+  editorNames,
   onToggleSelect,
   onStatusChange,
+  onQuickUpdate,
   onCopyLink,
   onEdit,
   onDelete,
@@ -1007,8 +1079,10 @@ function KanbanBoard({
   projects: Project[];
   selectedIds: string[];
   isLight: boolean;
+  editorNames: string[];
   onToggleSelect: (id: string) => void;
   onStatusChange: (id: string, next: ProjectStatus) => void;
+  onQuickUpdate: (id: string, fields: Partial<Project>) => void;
   onCopyLink: (url: string, label: string) => void;
   onEdit: (project: Project) => void;
   onDelete: (project: Project) => void;
@@ -1051,8 +1125,10 @@ function KanbanBoard({
                     project={project}
                     isSelected={selectedIds.includes(project.id)}
                     isLight={isLight}
+                    editorNames={editorNames}
                     onToggleSelect={onToggleSelect}
                     onStatusChange={onStatusChange}
+                    onQuickUpdate={onQuickUpdate}
                     onCopyLink={onCopyLink}
                     onEdit={onEdit}
                     onDelete={onDelete}
@@ -1267,23 +1343,13 @@ function ProjectFormModal({
           </div>
 
           <div>
-            <label className={labelClass}>タイトル *</label>
+            <label className={labelClass}>タイトル / 案件名 *</label>
             <input
               className={inputClass}
               value={form.title}
               onChange={(e) => update('title', e.target.value)}
               placeholder="例: 保育園での一日"
               required
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>ファイル名/案件名</label>
-            <input
-              className={inputClass}
-              value={form.fileName}
-              onChange={(e) => update('fileName', e.target.value)}
-              placeholder="例: runa_nursery_01"
             />
           </div>
 
@@ -1613,6 +1679,26 @@ export default function VideoProgressApp() {
     }
   }
 
+  // カンバンカード等からのクイック更新処理
+  async function handleQuickUpdate(id: string, fields: Partial<Project>) {
+    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, ...fields } : p)));
+
+    const dbPayload = mapProjectToDb(fields);
+
+    try {
+      const { error } = await supabase
+        .from('movies')
+        .update(dbPayload)
+        .eq('id', id);
+
+      if (error) throw error;
+      showToast('更新しました');
+    } catch (err) {
+      console.error('Quick update failed:', err);
+      fetchProjects();
+    }
+  }
+
   function handleCopyLink(url: string, label: string) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).catch(() => {});
@@ -1657,7 +1743,7 @@ export default function VideoProgressApp() {
         ...modalState.project,
         clientName: data.clientName.trim(),
         title: data.title.trim(),
-        fileName: data.fileName.trim(),
+        fileName: data.title.trim(),
         status: data.status,
         mainEditor: data.mainEditor.trim(),
         director: data.director.trim(),
@@ -1698,7 +1784,7 @@ export default function VideoProgressApp() {
       const newProjectData = {
         clientName: data.clientName.trim(),
         title: data.title.trim(),
-        fileName: data.fileName.trim() || data.title.trim(),
+        fileName: data.title.trim(),
         status: data.status,
         mainEditor: data.mainEditor.trim(),
         director: data.director.trim(),
@@ -1838,7 +1924,6 @@ export default function VideoProgressApp() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* テーマ切り替えボタン */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -1947,8 +2032,10 @@ export default function VideoProgressApp() {
               projects={filteredProjects}
               selectedIds={selectedIds}
               isLight={isLight}
+              editorNames={editorNames}
               onToggleSelect={handleToggleSelect}
               onStatusChange={handleStatusChange}
+              onQuickUpdate={handleQuickUpdate}
               onCopyLink={handleCopyLink}
               onEdit={handleOpenEditModal}
               onDelete={handleDeleteProject}
