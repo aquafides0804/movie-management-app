@@ -44,6 +44,8 @@ type ProjectStatus =
 
 type LinkType = 'google_drive' | 'frame_io' | 'gigafile' | 'youtube_private';
 type ViewMode = 'editor' | 'director' | 'client';
+type DateFilterType = 'deliveredDate' | 'clientSubmittedDate' | 'none';
+type DateConditionType = 'exact' | 'before' | 'after';
 
 interface ProjectLink {
   id: string;
@@ -505,7 +507,6 @@ function ProjectCard({
         )}
       </div>
 
-      {/* ドロップダウン選択：編集者 & Dir */}
       <div className="mb-3 grid grid-cols-2 gap-1.5 text-xs">
         <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 border ${isLight ? 'border-slate-200 bg-slate-50' : 'border-neutral-800 bg-neutral-950'}`}>
           <span className="text-[10px] text-slate-400 font-semibold shrink-0">編集:</span>
@@ -539,7 +540,6 @@ function ProjectCard({
         </div>
       </div>
 
-      {/* インライン編集：日付群 */}
       <div className={`mb-3 space-y-1.5 border-t pt-2 ${isLight ? 'border-slate-100' : 'border-neutral-800/80'}`}>
         <InlineDueRow
           icon={<Clock className={`h-3.5 w-3.5 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />}
@@ -733,10 +733,9 @@ function ClientTableView({
   const [selectedEditor, setSelectedEditor] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
-  // 日付フィルター状態
-  const [dateFieldType, setDateFieldType] = useState<'deliveredDate' | 'clientSubmittedDate' | 'none'>('none');
+  const [dateFieldType, setDateFieldType] = useState<DateFilterType>('none');
   const [targetDate, setTargetDate] = useState<string>('');
-  const [dateCondition, setDateCondition] = useState<'exact' | 'before' | 'after'>('exact');
+  const [dateCondition, setDateCondition] = useState<DateConditionType>('exact');
 
   const rawClientProjects = useMemo(() => {
     if (selectedClient === 'all') return projects;
@@ -756,7 +755,6 @@ function ClientTableView({
         return false;
       }
 
-      // 日付フィルター判定
       if (dateFieldType !== 'none' && targetDate) {
         const val = dateFieldType === 'deliveredDate' ? p.deliveredDate : p.clientSubmittedDate;
         if (!val) return false;
@@ -855,7 +853,6 @@ function ClientTableView({
           </div>
         </div>
 
-        {/* 日付フィルターエリア */}
         <div className={`flex flex-wrap items-center gap-2 border-t pt-3 ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
           <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600">
             <Filter className="h-3.5 w-3.5" />
@@ -864,7 +861,7 @@ function ClientTableView({
 
           <select
             value={dateFieldType}
-            onChange={(e) => setDateFieldType(e.target.value as any)}
+            onChange={(e) => setDateFieldType(e.target.value as DateFilterType)}
             className={selectClass}
           >
             <option value="none">指定なし</option>
@@ -887,7 +884,7 @@ function ClientTableView({
 
               <select
                 value={dateCondition}
-                onChange={(e) => setDateCondition(e.target.value as any)}
+                onChange={(e) => setDateCondition(e.target.value as DateConditionType)}
                 className={selectClass}
               >
                 <option value="exact">指定日ぴったり</option>
@@ -2025,7 +2022,6 @@ export default function VideoProgressApp() {
 
   return (
     <div className={`min-h-screen font-sans pb-20 ${bgMain}`}>
-      {/* ヘッダー */}
       <header className={`sticky top-0 z-30 border-b backdrop-blur ${bgHeader}`}>
         <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-4 px-6 py-3.5">
           <div className="flex items-center gap-2.5">
