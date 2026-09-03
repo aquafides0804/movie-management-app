@@ -300,15 +300,19 @@ export default function VideoProgressApp() {
 
       if (error) throw error;
 
-      const lineMessage =
-        `🔄 ステータスが変更されました！\n\n` +
-        `【クライアント】${target.clientName}\n` +
-        `【案件名】${target.title}\n` +
-        `【メイン担当】${target.mainEditor || '未設定'}\n` +
-        `【新ステータス】${STATUS_CONFIG[next].label}`;
+      // 「納品完了」にステータス変更された時のみLINE通知
+      if (next === 'delivered') {
+        const lineMessage =
+          `🎉 【納品完了】案件が完了しました！\n\n` +
+          `■ クライアント: ${target.clientName}\n` +
+          `■ 案件名: ${target.title}\n` +
+          `■ 担当者: ${target.mainEditor || '未設定'}`;
 
-      await sendLineNotification(lineMessage);
-      showToast('ステータスを更新し、LINEに通知しました');
+        await sendLineNotification(lineMessage);
+        showToast('納品完了に更新し、LINEに通知しました');
+      } else {
+        showToast('ステータスを更新しました');
+      }
     } catch (err) {
       alert('ステータスの更新に失敗しました');
       fetchProjects();
