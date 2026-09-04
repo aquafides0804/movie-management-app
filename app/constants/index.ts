@@ -1,64 +1,7 @@
-import { ProjectStatus, Member } from '@/app/types';
+import { ProjectStatus, LinkType } from '@/app/types';
+import { HardDrive, MessageSquareText, Upload, Video } from 'lucide-react';
 
-export interface StatusConfigItem {
-  label: string;
-  color: string;
-  badgeLight?: string;
-  badgeDark?: string;
-  dot?: string;
-}
-
-export const STATUS_CONFIG: Record<ProjectStatus, StatusConfigItem> = {
-  not_started: {
-    label: '未着手',
-    color: 'bg-slate-500/20 text-slate-300',
-    badgeLight: 'bg-slate-100 text-slate-700',
-    badgeDark: 'bg-slate-800 text-slate-300',
-    dot: 'bg-slate-400',
-  },
-  editing: {
-    label: '編集作業中',
-    color: 'bg-blue-500/20 text-blue-300',
-    badgeLight: 'bg-blue-100 text-blue-700',
-    badgeDark: 'bg-blue-900/40 text-blue-300',
-    dot: 'bg-blue-400',
-  },
-  client_review: {
-    label: '先方確認中',
-    color: 'bg-amber-500/20 text-amber-300',
-    badgeLight: 'bg-amber-100 text-amber-700',
-    badgeDark: 'bg-amber-900/40 text-amber-300',
-    dot: 'bg-amber-400',
-  },
-  revision_requested: {
-    label: '修正指示あり',
-    color: 'bg-rose-500/20 text-rose-300',
-    badgeLight: 'bg-rose-100 text-rose-700',
-    badgeDark: 'bg-rose-900/40 text-rose-300',
-    dot: 'bg-rose-400',
-  },
-  revision: {
-    label: '修正作業中',
-    color: 'bg-purple-500/20 text-purple-300',
-    badgeLight: 'bg-purple-100 text-purple-700',
-    badgeDark: 'bg-purple-900/40 text-purple-300',
-    dot: 'bg-purple-400',
-  },
-  revision_submitted: {
-    label: '修正提出済み',
-    color: 'bg-indigo-500/20 text-indigo-300',
-    badgeLight: 'bg-indigo-100 text-indigo-700',
-    badgeDark: 'bg-indigo-900/40 text-indigo-300',
-    dot: 'bg-indigo-400',
-  },
-  delivered: {
-    label: '納品完了',
-    color: 'bg-emerald-500/20 text-emerald-300',
-    badgeLight: 'bg-emerald-100 text-emerald-700',
-    badgeDark: 'bg-emerald-900/40 text-emerald-300',
-    dot: 'bg-emerald-400',
-  },
-};
+export const DIRECTOR_PASSWORD = '0531';
 
 export const STATUS_ORDER: ProjectStatus[] = [
   'not_started',
@@ -70,6 +13,57 @@ export const STATUS_ORDER: ProjectStatus[] = [
   'delivered',
 ];
 
-export const DEFAULT_MEMBERS: Member[] = [
-  { id: '1', name: '未割り当て', role: 'both' },
-];
+export const STATUS_CONFIG: Record<
+  ProjectStatus,
+  { label: string; badgeDark: string; badgeLight: string; dot: string }
+> = {
+  not_started: {
+    label: '未着手',
+    badgeDark: 'bg-slate-700 text-slate-100 border-slate-500',
+    badgeLight: 'bg-slate-100 text-slate-800 border-slate-300',
+    dot: 'bg-slate-400',
+  },
+  editing: {
+    label: '編集',
+    badgeDark: 'bg-indigo-950 text-indigo-200 border-indigo-700',
+    badgeLight: 'bg-indigo-50 text-indigo-900 border-indigo-200',
+    dot: 'bg-indigo-500',
+  },
+  client_review: {
+    label: 'CL確認中',
+    badgeDark: 'bg-amber-950 text-amber-200 border-amber-700',
+    badgeLight: 'bg-amber-50 text-amber-900 border-amber-200',
+    dot: 'bg-amber-500',
+  },
+  revision_requested: {
+    label: 'CLから修正',
+    badgeDark: 'bg-fuchsia-950 text-fuchsia-200 border-fuchsia-700',
+    badgeLight: 'bg-fuchsia-50 text-fuchsia-900 border-fuchsia-200',
+    dot: 'bg-fuchsia-500',
+  },
+  revision: {
+    label: '修正',
+    badgeDark: 'bg-rose-950 text-rose-200 border-rose-700',
+    badgeLight: 'bg-rose-50 text-rose-900 border-rose-200',
+    dot: 'bg-rose-500',
+  },
+  revision_submitted: {
+    label: '修正提出',
+    badgeDark: 'bg-sky-950 text-sky-200 border-sky-700',
+    badgeLight: 'bg-sky-50 text-sky-900 border-sky-200',
+    dot: 'bg-sky-500',
+  },
+  delivered: {
+    label: '納品完了',
+    badgeDark: 'bg-emerald-950 text-emerald-200 border-emerald-700',
+    badgeLight: 'bg-emerald-50 text-emerald-900 border-emerald-200',
+    dot: 'bg-emerald-500',
+  },
+};
+
+export const LINK_CONFIG: Record<LinkType, { label: string; icon: typeof HardDrive }> = {
+  google_drive: { label: 'Googleドライブ', icon: HardDrive },
+  frame_io: { label: 'Frame.io', icon: MessageSquareText },
+  gigafile: { label: 'ギガファイル便', icon: Upload },
+  youtube_private: { label: 'YouTube限定公開', icon: Video },
+};
