@@ -134,6 +134,23 @@ export default function VideoProgressApp() {
 
   useEffect(() => {
     fetchProjects();
+
+    // Supabase の members テーブルから最新の担当者一覧を取得
+    const fetchMembers = async () => {
+      const { data, error } = await supabase.from('members').select('*');
+      if (error) {
+        console.error('メンバー取得エラー:', error);
+        return;
+      }
+      if (data && data.length > 0) {
+        const editors = data.filter((m) => m.role === 'editor').map((m) => m.name);
+        const directors = data.filter((m) => m.role === 'director').map((m) => m.name);
+        setCustomEditors(editors);
+        setCustomDirectors(directors);
+      }
+    };
+
+    fetchMembers();
   }, []);
 
   function toggleTheme() {
@@ -235,39 +252,61 @@ export default function VideoProgressApp() {
     }
   };
 
-  const handleAddMember = (name: string, role: 'editor' | 'director') => {
+  const handleAddMember = async (name: string, role: 'editor' | 'director') => {
     if (role === 'editor') {
-      if (!customEditors.includes(name)) setCustomEditors((prev) => [...prev, name]);
+      if (customEditors.includes(name)) return;
+      setCustomEditors((prev) => [...prev, name]);
     } else {
-      if (!customDirectors.includes(name)) setCustomDirectors((prev) => [...prev, name]);
+      if (customDirectors.includes(name)) return;
+      setCustomDirectors((prev) => [...prev, name]);
     }
-    showToast(`「${name}」を追加しました`);
+
+    try {
+      const { error } = await supabase.from('members').insert({ name, role });
+      if (error) throw error;
+      showToast(`「${name}」を追加しました`);
+    } catch (error) {
+      console.error('メンバー追加エラー:', error);
+      showToast('メンバーの追加保存に失敗しました');
+    }
   };
 
   const handleDeleteMember = async (targetName: string, role: 'editor' | 'director') => {
-    if (!confirm(`「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている案件は自動的に「未割当」に変更されます。`)) {
+    if (!confirm(`「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている案件は自動的に未割当に変更されます。`)) {
       return;
     }
 
-    if (role === 'editor') {
-      setCustomEditors((prev) => prev.filter((n) => n !== targetName));
-    } else {
-      setCustomDirectors((prev) => prev.filter((n) => n !== targetName));
-    }
+    try {
+      // 1. ローカルStateの更新
+      if (role === 'editor') {
+        setCustomEditors((prev) => prev.filter((n) => n !== targetName));
+      } else {
+        setCustomDirectors((prev) => prev.filter((n) => n !== targetName));
+      }
 
-    const targetKey = role === 'editor' ? 'main_editor' : 'director';
-    const affectedProjects = projects.filter((p) => (role === 'editor' ? p.mainEditor : p.director) === targetName);
+      // 2. Supabase の members テーブルから削除
+      const { error: memberError } = await supabase
+        .from('members')
+        .delete()
+        .eq('name', targetName)
+        .eq('role', role);
 
-    if (affectedProjects.length > 0) {
-      try {
+      if (memberError) throw memberError;
+
+      // 3. 該当する案件の担当を解除（空文字または未割当へ）
+      const targetKey = role === 'editor' ? 'main_editor' : 'director';
+      const affectedProjects = projects.filter((p) => (role === 'editor' ? p.mainEditor : p.director) === targetName);
+
+      if (affectedProjects.length > 0) {
         const affectedIds = affectedProjects.map((p) => p.id);
-        const { error } = await supabase
+        const { error: projectError } = await supabase
           .from('movies')
           .update({ [targetKey]: '' })
           .in('id', affectedIds);
 
-        if (error) throw error;
+        if (projectError) throw projectError;
 
+        // ローカルの案件一覧も更新
         setProjects((prev) =>
           prev.map((p) => {
             if (role === 'editor' && p.mainEditor === targetName) return { ...p, mainEditor: '' };
@@ -275,14 +314,12 @@ export default function VideoProgressApp() {
             return p;
           })
         );
-
-        showToast(`「${targetName}」を削除し、${affectedProjects.length}件の案件を未割当に変更しました`);
-      } catch (err) {
-        alert('担当者削除に伴う案件の更新に失敗しました');
-        fetchProjects();
       }
-    } else {
+
       showToast(`「${targetName}」を削除しました`);
+    } catch (error) {
+      console.error('メンバー削除エラー:', error);
+      showToast('メンバーの追加保存に失敗しました');
     }
   };
 
