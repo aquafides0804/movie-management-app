@@ -132,16 +132,17 @@ export default function VideoProgressApp() {
     }
   };
 
-  useEffect(() => {
+ useEffect(() => {
     fetchProjects();
 
-    // Supabase の members テーブルから最新の担当者一覧を取得
     const fetchMembers = async () => {
       const { data, error } = await supabase.from('members').select('*');
       if (error) {
         console.error('メンバー取得エラー:', error);
         return;
       }
+      
+      // DBにデータが存在する場合は、DBのデータで完全上書きする
       if (data && data.length > 0) {
         const editors = data.filter((m) => m.role === 'editor').map((m) => m.name);
         const directors = data.filter((m) => m.role === 'director').map((m) => m.name);
