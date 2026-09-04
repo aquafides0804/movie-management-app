@@ -1,5 +1,3 @@
-import { HardDrive } from 'lucide-react';
-
 export type ProjectStatus =
   | 'not_started'
   | 'editing'
@@ -9,77 +7,49 @@ export type ProjectStatus =
   | 'revision_submitted'
   | 'delivered';
 
-export type LinkType = 'google_drive' | 'frame_io' | 'gigafile' | 'youtube_private';
-export type ViewMode = 'editor' | 'director' | 'client';
-export type DateFilterType = 'deliveredDate' | 'clientSubmittedDate' | 'none';
-export type DateConditionType = 'exact' | 'before' | 'after';
-
 export interface ProjectLink {
-  id: string;
-  linkType: LinkType;
+  label: string;
   url: string;
-  expiresAt: string | null;
+  linkType?: string;
 }
 
 export interface Project {
   id: string;
-  clientName: string;
   title: string;
-  fileName: string;
+  clientName: string;
+  videoType?: string;
+  mainEditor?: string;
+  director?: string;
   status: ProjectStatus;
-  mainEditor: string;
-  director: string;
-  internalDueDate: string | null;
-  draftDueDate: string | null;
-  draftSubmittedDate: string | null;
-  clientSubmittedDate: string | null;
-  revisionCompletedDate: string | null;
-  deliveredDate: string | null;
-  priority: 0 | 1 | 2;
-  revisionNote: string | null;
-  links: ProjectLink[];
+  draftDueDate?: string;
+  clientSubmittedDate?: string;
+  deliveredDate?: string;
+  driveUrl?: string;
+  gigafileUrl?: string;
+  gigafileExpDate?: string;
+  notes?: string;
+  links?: ProjectLink[];
 }
+
+export type MemberRole = 'editor' | 'director' | 'both';
+
+export interface Member {
+  id: string;
+  name: string;
+  role: MemberRole;
+}
+
+export type DateFilterType = 'none' | 'clientSubmitted' | 'delivered' | 'clientSubmittedDate' | 'deliveredDate';
+export type DateConditionType = 'exact' | 'before' | 'after';
 
 export interface DashboardFilters {
-  clientName: string | 'all';
-  editor: string | 'all';
   keyword: string;
-  onlyAlerts: boolean;
-}
-
-export interface ProjectFormData {
   clientName: string;
-  title: string;
-  status: ProjectStatus;
-  mainEditor: string;
-  director: string;
-  internalDueDate: string;
-  draftDueDate: string;
-  draftSubmittedDate: string;
-  clientSubmittedDate: string;
-  revisionCompletedDate: string;
-  deliveredDate: string;
-  priority: 0 | 1 | 2;
-  revisionNote: string;
-  googleDriveUrl: string;
-  frameIoUrl: string;
-  gigafileUrl: string;
-  gigafileExpiresAt: string;
-  youtubeUrl: string;
-}
-
-export interface EditorWorkload {
-  name: string;
-  activeCount: number;
-  overdueCount: number;
-  deliveredCount: number;
-  totalCount: number;
-}
-
-export interface ClientProgress {
-  name: string;
-  totalCount: number;
-  deliveredCount: number;
-  overdueCount: number;
-  deliveredRate: number;
+  editor: string;
+  status?: string;
+  onlyAlerts: boolean;
+  missingField?: 'none' | 'clientSubmittedDate' | 'deliveredDate' | 'mainEditor';
+  dateType?: DateFilterType;
+  dateCondition?: DateConditionType;
+  targetDate?: string;
 }

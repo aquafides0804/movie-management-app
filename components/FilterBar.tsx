@@ -1,7 +1,17 @@
 'use client';
 
+import React from 'react';
 import { DashboardFilters } from '@/app/types';
-import { Search, AlertTriangle, Plus } from 'lucide-react';
+import { Calendar, Search, Filter, AlertTriangle } from 'lucide-react';
+
+interface FilterBarProps {
+  filters: DashboardFilters;
+  isLight: boolean;
+  onChange: (filters: DashboardFilters) => void;
+  clientNames: string[];
+  editorNames: string[];
+  onOpenAddModal: () => void;
+}
 
 export default function FilterBar({
   filters,
@@ -9,86 +19,88 @@ export default function FilterBar({
   onChange,
   clientNames,
   editorNames,
-  onOpenAddModal,
-}: {
-  filters: DashboardFilters;
-  isLight: boolean;
-  onChange: (f: DashboardFilters) => void;
-  clientNames: string[];
-  editorNames: string[];
-  onOpenAddModal: () => void;
-}) {
-  function update<K extends keyof DashboardFilters>(key: K, value: DashboardFilters[K]) {
-    onChange({ ...filters, [key]: value });
-  }
-
-  const bgBar = isLight ? 'bg-white border-slate-200' : 'bg-neutral-900 border-neutral-800';
-  const inputClass = isLight
-    ? 'border-slate-300 bg-white text-slate-800 placeholder:text-slate-400 focus:border-amber-500'
-    : 'border-neutral-700 bg-neutral-950 text-neutral-100 placeholder:text-neutral-400 focus:border-amber-500';
+}: FilterBarProps) {
+  const bgCard = isLight ? 'bg-white border-slate-200' : 'bg-neutral-900 border-neutral-800';
+  const inputBg = isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-neutral-800 border-neutral-700 text-white';
 
   return (
-    <div className={`flex flex-wrap items-center gap-2 rounded-lg border p-2.5 ${bgBar}`}>
-      <div className="relative">
-        <Search className={`pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${isLight ? 'text-slate-400' : 'text-neutral-400'}`} />
-        <input
-          type="text"
-          value={filters.keyword}
-          onChange={(e) => update('keyword', e.target.value)}
-          placeholder="案件名・タイトルを検索"
-          className={`w-56 rounded-md border py-1.5 pl-8 pr-2 text-xs font-medium focus:outline-none ${inputClass}`}
-        />
+    <div className={`rounded-xl border p-4 shadow-sm space-y-4 ${bgCard}`}>
+      <div className="flex flex-wrap items-center gap-3">
+        {/* キーワード検索 */}
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-400" />
+          <input
+            type="text"
+            placeholder="案件名、クライアント名で検索..."
+            value={filters.keyword}
+            onChange={(e) => onChange({ ...filters, keyword: e.target.value })}
+            className={`w-full rounded-lg border pl-9 pr-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 ${inputBg}`}
+          />
+        </div>
+
+        {/* クライアント選択 */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-bold text-neutral-400 whitespace-nowrap">クライアント:</span>
+          <select
+            value={filters.clientName}
+            onChange={(e) => onChange({ ...filters, clientName: e.target.value })}
+            className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold focus:outline-none ${inputBg}`}
+          >
+            <option value="all">全クライアント（すべて表示）</option>
+            {clientNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 担当編集者選択 */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-bold text-neutral-400 whitespace-nowrap">担当者:</span>
+          <select
+            value={filters.editor}
+            onChange={(e) => onChange({ ...filters, editor: e.target.value })}
+            className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold focus:outline-none ${inputBg}`}
+          >
+            <option value="all">全員</option>
+            <option value="unassigned">未割り当て</option>
+            {editorNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 未入力フィルター（CL提出日未入力など） */}
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-bold text-neutral-400 whitespace-nowrap">未入力絞り込み:</span>
+          <select
+            value={filters.missingField || 'none'}
+            onChange={(e) => onChange({ ...filters, missingField: e.target.value as any })}
+            className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold focus:outline-none ${inputBg}`}
+          >
+            <option value="none">指定なし</option>
+            <option value="clientSubmittedDate">CL提出日が未入力</option>
+            <option value="deliveredDate">納品日が未入力</option>
+            <option value="mainEditor">担当編集者が未割り当て</option>
+          </select>
+        </div>
+
+        {/* アラートのみ */}
+        <button
+          onClick={() => onChange({ ...filters, onlyAlerts: !filters.onlyAlerts })}
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all ${
+            filters.onlyAlerts
+              ? 'bg-rose-500/20 border-rose-500 text-rose-400'
+              : 'border-neutral-700 text-neutral-400 hover:text-white'
+          }`}
+        >
+          <AlertTriangle className="h-3.5 w-3.5" />
+          アラートのみ
+        </button>
       </div>
-
-      <select
-        value={filters.clientName}
-        onChange={(e) => update('clientName', e.target.value)}
-        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium focus:outline-none ${inputClass}`}
-      >
-        <option value="all">全クライアント</option>
-        {clientNames.map((c) => (
-          <option key={c} value={c}>
-            {c}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={filters.editor}
-        onChange={(e) => update('editor', e.target.value)}
-        className={`rounded-md border px-2.5 py-1.5 text-xs font-medium focus:outline-none ${inputClass}`}
-      >
-        <option value="all">全担当者</option>
-        {editorNames.map((u) => (
-          <option key={u} value={u}>
-            {u}
-          </option>
-        ))}
-      </select>
-
-      <button
-        type="button"
-        onClick={() => update('onlyAlerts', !filters.onlyAlerts)}
-        className={`flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-bold transition-colors ${
-          filters.onlyAlerts
-            ? 'border-rose-500 bg-rose-50 text-rose-700'
-            : isLight
-            ? 'border-slate-300 bg-white text-slate-700 hover:border-slate-400'
-            : 'border-neutral-700 bg-neutral-950 text-neutral-200 hover:border-neutral-500'
-        }`}
-      >
-        <AlertTriangle className="h-3.5 w-3.5" />
-        要対応のみ
-      </button>
-
-      <button
-        type="button"
-        onClick={onOpenAddModal}
-        className="ml-auto flex items-center gap-1.5 rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-amber-500 transition-colors shadow"
-      >
-        <Plus className="h-3.5 w-3.5" />
-        新規案件追加
-      </button>
     </div>
   );
 }
