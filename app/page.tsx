@@ -142,8 +142,8 @@ export default function VideoProgressApp() {
         return;
       }
       
-      // DBにデータが存在する場合は、DBのデータで完全上書きする
-      if (data && data.length > 0) {
+      // members テーブルのデータのみをマスターとしてセットする（案件からの自動合成を行わない）
+      if (data) {
         const editors = data.filter((m) => m.role === 'editor').map((m) => m.name);
         const directors = data.filter((m) => m.role === 'director').map((m) => m.name);
         setCustomEditors(editors);
@@ -273,19 +273,12 @@ export default function VideoProgressApp() {
   };
 
   const handleDeleteMember = async (targetName: string, role: 'editor' | 'director') => {
-    if (!confirm(`「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている案件は自動的に未割当に変更されます。`)) {
+    if (!confirm(`「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている全案件は自動的に「未割当」に変更されます。`)) {
       return;
     }
 
     try {
-      // 1. ローカルStateの更新
-      if (role === 'editor') {
-        setCustomEditors((prev) => prev.filter((n) => n !== targetName));
-      } else {
-        setCustomDirectors((prev) => prev.filter((n) => n !== targetName));
-      }
-
-      // 2. Supabase の members テーブルから削除
+      // 1. Supabase の members テーブルから削除
       const { error: memberError } = await supabase
         .from('members')
         .delete()
@@ -294,33 +287,46 @@ export default function VideoProgressApp() {
 
       if (memberError) throw memberError;
 
-      // 3. 該当する案件の担当を解除（空文字または未割当へ）
-      const targetKey = role === 'editor' ? 'main_editor' : 'director';
-      const affectedProjects = projects.filter((p) => (role === 'editor' ? p.mainEditor : p.director) === targetName);
-
-      if (affectedProjects.length > 0) {
-        const affectedIds = affectedProjects.map((p) => p.id);
-        const { error: projectError } = await supabase
+      // 2. movies テーブルの該当担当者を「未割当」（または空文字）に一括更新
+      // ※DBのカラム名に合わせて main_editor / editor / director を更新します
+      if (role === 'editor') {
+        await supabase
           .from('movies')
-          .update({ [targetKey]: '' })
-          .in('id', affectedIds);
+          .update({ main_editor: '未割当' })
+          .eq('main_editor', targetName);
 
-        if (projectError) throw projectError;
-
-        // ローカルの案件一覧も更新
-        setProjects((prev) =>
-          prev.map((p) => {
-            if (role === 'editor' && p.mainEditor === targetName) return { ...p, mainEditor: '' };
-            if (role === 'director' && p.director === targetName) return { ...p, director: '' };
-            return p;
-          })
-        );
+        await supabase
+          .from('movies')
+          .update({ editor: '未割当' })
+          .eq('editor', targetName);
+      } else {
+        await supabase
+          .from('movies')
+          .update({ director: '未割当' })
+          .eq('director', targetName);
       }
 
-      showToast(`「${targetName}」を削除しました`);
+      // 3. 画面上の State も即座に一括更新
+      setCustomEditors((prev) => prev.filter((n) => n !== targetName));
+      setCustomDirectors((prev) => prev.filter((n) => n !== targetName));
+
+      setProjects((prev) =>
+        prev.map((p) => {
+          const updated = { ...p };
+          if (role === 'editor') {
+            if (updated.mainEditor === targetName) updated.mainEditor = '未割当';
+            
+          } else {
+            if (updated.director === targetName) updated.director = '未割当';
+          }
+          return updated;
+        })
+      );
+
+      showToast(`「${targetName}」を削除し、該当案件を「未割当」に変更しました`);
     } catch (error) {
       console.error('メンバー削除エラー:', error);
-      showToast('メンバーの追加保存に失敗しました');
+      showToast('削除処理中にエラーが発生しました');
     }
   };
 
