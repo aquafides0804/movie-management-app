@@ -100,6 +100,7 @@ export default function VideoProgressApp() {
 
   const [customEditors, setCustomEditors] = useState<string[]>(['金本さん', '中山さん', '内田', '山田']);
   const [customDirectors, setCustomDirectors] = useState<string[]>(['望月']);
+  const [customClients, setCustomClients] = useState<string[]>([]);
 
   const [filters, setFilters] = useState<DashboardFilters>({
     clientName: 'all',
@@ -146,8 +147,10 @@ export default function VideoProgressApp() {
       if (data) {
         const editors = data.filter((m) => m.role === 'editor').map((m) => m.name);
         const directors = data.filter((m) => m.role === 'director').map((m) => m.name);
+        const clients = data.filter((m) => m.role === 'client').map((m) => m.name);
         setCustomEditors(editors);
         setCustomDirectors(directors);
+        setCustomClients(clients);
       }
     };
 
@@ -253,27 +256,39 @@ export default function VideoProgressApp() {
     }
   };
 
-  const handleAddMember = async (name: string, role: 'editor' | 'director') => {
+  const handleAddMember = async (
+    name: string,
+    role: 'editor' | 'director' | 'client',
+    silent = false
+  ) => {
     if (role === 'editor') {
       if (customEditors.includes(name)) return;
       setCustomEditors((prev) => [...prev, name]);
-    } else {
+    } else if (role === 'director') {
       if (customDirectors.includes(name)) return;
       setCustomDirectors((prev) => [...prev, name]);
+    } else {
+      if (customClients.includes(name)) return;
+      setCustomClients((prev) => [...prev, name]);
     }
 
     try {
       const { error } = await supabase.from('members').insert({ name, role });
       if (error) throw error;
-      showToast(`「${name}」を追加しました`);
+      if (!silent) showToast(`「${name}」を追加しました`);
     } catch (error) {
       console.error('メンバー追加エラー:', error);
-      showToast('メンバーの追加保存に失敗しました');
+      if (!silent) showToast('メンバーの追加保存に失敗しました');
     }
   };
 
-  const handleDeleteMember = async (targetName: string, role: 'editor' | 'director') => {
-    if (!confirm(`「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている全案件は自動的に「未割当」に変更されます。`)) {
+  const handleDeleteMember = async (targetName: string, role: 'editor' | 'director' | 'client') => {
+    const confirmMessage =
+      role === 'client'
+        ? `「${targetName}」を削除してもよろしいですか？\n※既存案件のクライアント名は変更されません（一覧の候補から消えるのみです）。`
+        : `「${targetName}」を削除してもよろしいですか？\n※この担当者が割り当てられている全案件は自動的に「未割当」に変更されます。`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -289,6 +304,7 @@ export default function VideoProgressApp() {
 
       // 2. movies テーブルの該当担当者を「未割当」（または空文字）に一括更新
       // ※DBのカラム名に合わせて main_editor / editor / director を更新します
+      // クライアント名は既存案件から消さない（履歴として残す）
       if (role === 'editor') {
         await supabase
           .from('movies')
@@ -299,7 +315,7 @@ export default function VideoProgressApp() {
           .from('movies')
           .update({ editor: '未割当' })
           .eq('editor', targetName);
-      } else {
+      } else if (role === 'director') {
         await supabase
           .from('movies')
           .update({ director: '未割当' })
@@ -309,6 +325,7 @@ export default function VideoProgressApp() {
       // 3. 画面上の State も即座に一括更新
       setCustomEditors((prev) => prev.filter((n) => n !== targetName));
       setCustomDirectors((prev) => prev.filter((n) => n !== targetName));
+      setCustomClients((prev) => prev.filter((n) => n !== targetName));
 
       setProjects((prev) =>
         prev.map((p) => {
@@ -316,14 +333,18 @@ export default function VideoProgressApp() {
           if (role === 'editor') {
             if (updated.mainEditor === targetName) updated.mainEditor = '未割当';
             
-          } else {
+          } else if (role === 'director') {
             if (updated.director === targetName) updated.director = '未割当';
           }
           return updated;
         })
       );
 
-      showToast(`「${targetName}」を削除し、該当案件を「未割当」に変更しました`);
+      showToast(
+        role === 'client'
+          ? `「${targetName}」をクライアント一覧から削除しました`
+          : `「${targetName}」を削除し、該当案件を「未割当」に変更しました`
+      );
     } catch (error) {
       console.error('メンバー削除エラー:', error);
       showToast('削除処理中にエラーが発生しました');
@@ -450,6 +471,7 @@ export default function VideoProgressApp() {
         if (error) throw error;
 
         setProjects((prev) => prev.map((p) => (p.id === updatedProject.id ? updatedProject : p)));
+        handleAddMember(updatedProject.clientName, 'client', true);
 
         const lineMessage =
           `📝 案件情報が更新されました！\n\n` +
@@ -493,6 +515,7 @@ export default function VideoProgressApp() {
 
         const insertedProject = mapDbToProject(inserted);
         setProjects((prev) => [insertedProject, ...prev]);
+        handleAddMember(insertedProject.clientName, 'client', true);
 
         const lineMessage =
           `🎬 新規案件が追加されました！\n\n` +
@@ -513,8 +536,9 @@ export default function VideoProgressApp() {
   }
 
   const clientNames = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.clientName).filter(Boolean))).sort(),
-    [projects]
+    () =>
+      Array.from(new Set([...customClients, ...projects.map((p) => p.clientName).filter(Boolean)])).sort(),
+    [projects, customClients]
   );
 
   const editorNames = useMemo(
@@ -757,6 +781,7 @@ export default function VideoProgressApp() {
           isLight={isLight}
           editorList={editorNames}
           directorList={directorNames}
+          clientList={clientNames}
           onAddMember={handleAddMember}
           onDeleteMember={handleDeleteMember}
           onClose={() => setShowMemberModal(false)}
@@ -813,6 +838,7 @@ export default function VideoProgressApp() {
           isLight={isLight}
           editorNames={editorNames}
           directorNames={directorNames}
+          clientNames={clientNames}
           initial={modalState.mode === 'edit' ? projectToFormData(modalState.project) : emptyFormData()}
           onSave={handleSaveProject}
           onClose={() => setModalState(null)}

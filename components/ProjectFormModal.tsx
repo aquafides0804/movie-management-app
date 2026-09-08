@@ -11,6 +11,7 @@ export default function ProjectFormModal({
   isLight,
   editorNames,
   directorNames,
+  clientNames,
   onSave,
   onClose,
 }: {
@@ -19,10 +20,17 @@ export default function ProjectFormModal({
   isLight: boolean;
   editorNames: string[];
   directorNames: string[];
+  clientNames: string[];
   onSave: (data: ProjectFormData) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState<ProjectFormData>(initial);
+
+  // 既存クライアントとして選択するか、新規クライアント名を入力するかの表示モード
+  // 編集時、既存リストにない名前（旧データ等）の場合は「新規入力」表示から開始する
+  const [clientMode, setClientMode] = useState<'select' | 'new'>(
+    initial.clientName && !clientNames.includes(initial.clientName) ? 'new' : 'select'
+  );
 
   function update<K extends keyof ProjectFormData>(key: K, value: ProjectFormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -61,13 +69,63 @@ export default function ProjectFormModal({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>クライアント名 *</label>
-              <input
-                className={inputClass}
-                value={form.clientName}
-                onChange={(e) => update('clientName', e.target.value)}
-                placeholder="例: ルナ様"
-                required
-              />
+              {clientMode === 'select' ? (
+                <select
+                  className={inputClass}
+                  value={clientNames.includes(form.clientName) ? form.clientName : ''}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') {
+                      setClientMode('new');
+                      update('clientName', '');
+                    } else {
+                      update('clientName', e.target.value);
+                    }
+                  }}
+                  required
+                >
+                  <option value="" disabled>
+                    選択してください
+                  </option>
+                  {clientNames.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                  <option value="__new__">+ 新しいクライアントを追加</option>
+                </select>
+              ) : (
+                <div className="flex gap-1.5">
+                  <input
+                    className={inputClass}
+                    value={form.clientName}
+                    onChange={(e) => update('clientName', e.target.value)}
+                    placeholder="例: ルナ様"
+                    autoFocus
+                    required
+                  />
+                  {clientNames.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClientMode('select');
+                        update('clientName', '');
+                      }}
+                      className={`shrink-0 rounded-md border px-2 text-[11px] font-semibold ${
+                        isLight
+                          ? 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                          : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'
+                      }`}
+                    >
+                      一覧から選ぶ
+                    </button>
+                  )}
+                </div>
+              )}
+              {clientMode === 'new' && (
+                <p className={`mt-1 text-[10px] ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+                  保存すると、次回からこの名前を一覧から選べるようになります
+                </p>
+              )}
             </div>
             <div>
               <label className={labelClass}>ステータス</label>

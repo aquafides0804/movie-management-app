@@ -7,6 +7,7 @@ export default function MemberManagementModal({
   isLight,
   editorList,
   directorList,
+  clientList,
   onAddMember,
   onDeleteMember,
   onClose,
@@ -14,12 +15,14 @@ export default function MemberManagementModal({
   isLight: boolean;
   editorList: string[];
   directorList: string[];
-  onAddMember: (name: string, role: 'editor' | 'director') => void;
-  onDeleteMember: (name: string, role: 'editor' | 'director') => void;
+  clientList: string[];
+  onAddMember: (name: string, role: 'editor' | 'director' | 'client') => void;
+  onDeleteMember: (name: string, role: 'editor' | 'director' | 'client') => void;
   onClose: () => void;
 }) {
   const [newEditorName, setNewEditorName] = useState('');
   const [newDirectorName, setNewDirectorName] = useState('');
+  const [newClientName, setNewClientName] = useState('');
 
   const bgModal = isLight ? 'bg-white border-slate-200' : 'bg-neutral-900 border-neutral-800';
   const inputClass = isLight
@@ -32,7 +35,7 @@ export default function MemberManagementModal({
         <div className={`flex items-center justify-between border-b px-4 py-3 ${isLight ? 'border-slate-200 bg-white' : 'border-neutral-800 bg-neutral-900'}`}>
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-amber-600" />
-            <h2 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-neutral-100'}`}>担当者一覧の管理</h2>
+            <h2 className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-neutral-100'}`}>担当者・クライアントの管理</h2>
           </div>
           <button
             type="button"
@@ -135,6 +138,59 @@ export default function MemberManagementModal({
                       onClick={() => onDeleteMember(name, 'director')}
                       className="text-slate-400 hover:text-rose-600 rounded p-0.5"
                       title="削除（担当案件は未割当になります）"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className={`border-t pt-4 ${isLight ? 'border-slate-200' : 'border-neutral-800'}`}>
+            <h3 className={`mb-2 text-xs font-bold ${isLight ? 'text-slate-800' : 'text-neutral-200'}`}>クライアント 一覧</h3>
+            <p className={`mb-2 text-[11px] ${isLight ? 'text-slate-500' : 'text-neutral-400'}`}>
+              案件登録時に新しいクライアント名を入力すると、ここに自動的に追加されます。ここから手動で追加・削除も可能です。
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="新しいクライアント名"
+                value={newClientName}
+                onChange={(e) => setNewClientName(e.target.value)}
+                className={`flex-1 ${inputClass}`}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newClientName.trim()) {
+                    onAddMember(newClientName.trim(), 'client');
+                    setNewClientName('');
+                  }
+                }}
+                className="flex items-center gap-1 rounded bg-amber-600 px-3 py-1 text-xs font-bold text-white hover:bg-amber-500"
+              >
+                <UserPlus className="h-3.5 w-3.5" /> 追加
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              {clientList.length === 0 ? (
+                <p className="text-xs text-slate-400">登録されているクライアントはいません</p>
+              ) : (
+                clientList.map((name) => (
+                  <div
+                    key={name}
+                    className={`flex items-center justify-between rounded border px-2.5 py-1.5 text-xs font-semibold ${
+                      isLight ? 'border-slate-200 bg-slate-50 text-slate-800' : 'border-neutral-800 bg-neutral-950 text-neutral-200'
+                    }`}
+                  >
+                    <span>{name}</span>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteMember(name, 'client')}
+                      className="text-slate-400 hover:text-rose-600 rounded p-0.5"
+                      title="削除（既存案件のクライアント名は変わりません）"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
