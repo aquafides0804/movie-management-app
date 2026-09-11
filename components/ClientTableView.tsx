@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { Project, DateFilterType, DateConditionType } from '@/app/types';
 import { STATUS_CONFIG, STATUS_ORDER } from '@/app/constants';
 import { projectHasAlert, getDueBadge, formatDateShort } from '@/app/utils';
-import { Building2, Filter, Pencil, HardDrive, Copy, AlertTriangle } from 'lucide-react';
+import { Building2, Filter, Pencil, HardDrive, Copy, AlertTriangle, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 export default function ClientTableView({
   projects,
@@ -36,6 +36,20 @@ export default function ClientTableView({
   const [targetDate, setTargetDate] = useState<string>('');
   const [dateCondition, setDateCondition] = useState<DateConditionType>('exact');
 
+  // テーブルの列見出しクリックによる並び替え（CL提出日 / 納品日 のみ対象）
+  type TableSortField = 'clientSubmittedDate' | 'deliveredDate';
+  const [sortField, setSortField] = useState<TableSortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleHeaderSort = (field: TableSortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
   const rawClientProjects = useMemo(() => {
     if (selectedClient === 'all') return projects;
     return projects.filter((p) => p.clientName === selectedClient);
@@ -66,6 +80,25 @@ export default function ClientTableView({
       return true;
     });
   }, [rawClientProjects, selectedEditor, selectedStatus, dateFieldType, targetDate, dateCondition]);
+
+  const sortedClientProjects = useMemo(() => {
+    if (!sortField) return clientProjects;
+
+    return [...clientProjects].sort((a, b) => {
+      const valA = a[sortField];
+      const valB = b[sortField];
+
+      // 日付未設定の案件は常に末尾に配置
+      if (!valA && !valB) return 0;
+      if (!valA) return 1;
+      if (!valB) return -1;
+
+      const timeA = new Date(valA).getTime();
+      const timeB = new Date(valB).getTime();
+
+      return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+    });
+  }, [clientProjects, sortField, sortOrder]);
 
   const totalCount = rawClientProjects.length;
   const deliveredCount = rawClientProjects.filter((p) => p.status === 'delivered').length;
@@ -229,21 +262,53 @@ export default function ClientTableView({
               <th className="p-3">案件名 / タイトル</th>
               <th className="p-3">担当編集者</th>
               <th className="p-3">ステータス</th>
-              <th className="p-3">CL提出日</th>
-              <th className="p-3">納品日</th>
+              <th className="p-3">
+                <button
+                  type="button"
+                  onClick={() => handleHeaderSort('clientSubmittedDate')}
+                  className={`flex items-center gap-1 uppercase tracking-wider ${
+                    sortField === 'clientSubmittedDate' ? 'text-amber-600' : ''
+                  } hover:text-amber-600 transition-colors`}
+                  title="クリックしてCL提出日で並び替え"
+                >
+                  CL提出日
+                  {sortField === 'clientSubmittedDate' ? (
+                    sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpDown className="h-3 w-3 opacity-40" />
+                  )}
+                </button>
+              </th>
+              <th className="p-3">
+                <button
+                  type="button"
+                  onClick={() => handleHeaderSort('deliveredDate')}
+                  className={`flex items-center gap-1 uppercase tracking-wider ${
+                    sortField === 'deliveredDate' ? 'text-amber-600' : ''
+                  } hover:text-amber-600 transition-colors`}
+                  title="クリックして納品日で並び替え"
+                >
+                  納品日
+                  {sortField === 'deliveredDate' ? (
+                    sortOrder === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                  ) : (
+                    <ArrowUpDown className="h-3 w-3 opacity-40" />
+                  )}
+                </button>
+              </th>
               <th className="p-3">期日アラート</th>
               <th className="p-3 text-center">Googleドライブ</th>
             </tr>
           </thead>
           <tbody className={`divide-y ${isLight ? 'divide-slate-100 text-slate-800' : 'divide-neutral-800/80 text-neutral-200'}`}>
-            {clientProjects.length === 0 ? (
+            {sortedClientProjects.length === 0 ? (
               <tr>
                 <td colSpan={8} className={`p-8 text-center font-medium ${isLight ? 'text-slate-400' : 'text-neutral-400'}`}>
                   条件に一致する案件はありません
                 </td>
               </tr>
             ) : (
-              clientProjects.map((project) => {
+              sortedClientProjects.map((project) => {
                 const statusConfig = STATUS_CONFIG[project.status] || STATUS_CONFIG['not_started'];
                 const draftDue = getDueBadge(project.draftDueDate);
                 const gDrive = project.links.find((l) => l.linkType === 'google_drive');
