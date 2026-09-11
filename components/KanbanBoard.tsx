@@ -7,7 +7,7 @@ import { projectHasAlert } from '@/app/utils';
 import ProjectCard from './ProjectCard';
 
 // Project 型に含まれる日付フィールドのキーのみに限定
-type SortKey = 'editorDeadline' | 'directorDeadline' | 'clientSubmissionDate' | 'revisionCompletedDate' | 'deliveryDate';
+type SortKey = 'internalDueDate' | 'draftDueDate' | 'clientSubmittedDate' | 'revisionCompletedDate' | 'deliveredDate';
 
 export default function KanbanBoard({
   projects,
@@ -36,10 +36,10 @@ export default function KanbanBoard({
 }) {
   // STATUS_ORDER に含まれるステータス値に合わせて初期化
   const [columnSortKey, setColumnSortKey] = useState<Partial<Record<ProjectStatus, SortKey>>>({
-    not_started: 'editorDeadline',
-    editing: 'editorDeadline',
-    client_review: 'clientSubmissionDate',
-    delivered: 'deliveryDate',
+    not_started: 'internalDueDate',
+    editing: 'internalDueDate',
+    client_review: 'clientSubmittedDate',
+    delivered: 'deliveredDate',
   });
 
   const [columnSortOrder, setColumnSortOrder] = useState<Partial<Record<ProjectStatus, 'asc' | 'desc'>>>({
@@ -75,7 +75,7 @@ export default function KanbanBoard({
         const alertCount = rawColumnProjects.filter(projectHasAlert).length;
 
         // 現在のカラムのソート条件を適用（デフォルトは編集者締切・昇順）
-        const currentSortKey = columnSortKey[status] || 'editorDeadline';
+        const currentSortKey = columnSortKey[status] || 'internalDueDate';
         const currentSortOrder = columnSortOrder[status] || 'asc';
         const columnProjects = sortProjects(rawColumnProjects, currentSortKey, currentSortOrder);
 
@@ -113,11 +113,11 @@ export default function KanbanBoard({
                   }
                   className={`flex-1 text-[11px] px-1.5 py-1 rounded border ${selectBg} focus:outline-none`}
                 >
-                  <option value="editorDeadline">編集者締切日</option>
-                  <option value="directorDeadline">Dir締切日</option>
-                  <option value="clientSubmissionDate">CL提出日</option>
+                  <option value="internalDueDate">編集者締切日</option>
+                  <option value="draftDueDate">Dir締切日</option>
+                  <option value="clientSubmittedDate">CL提出日</option>
                   <option value="revisionCompletedDate">修正完了日</option>
-                  <option value="deliveryDate">納品日</option>
+                  <option value="deliveredDate">納品日</option>
                 </select>
 
                 <button
