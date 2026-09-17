@@ -254,9 +254,9 @@ export default function ClientTableView({
         </div>
       </div>
 
-      <div className={`overflow-x-auto rounded-lg border shadow ${bgCard}`}>
+      <div className={`overflow-auto rounded-lg border shadow ${bgCard}`} style={{ maxHeight: 'calc(100vh - 420px)' }}>
         <table className="w-full text-left text-xs">
-          <thead className={`border-b text-xs font-semibold uppercase tracking-wider ${isLight ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-neutral-800 bg-neutral-950/90 text-neutral-300'}`}>
+          <thead className={`sticky top-0 z-10 border-b text-xs font-semibold uppercase tracking-wider ${isLight ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-neutral-800 bg-neutral-950/90 text-neutral-300'}`}>
             <tr>
               <th className="p-3 w-10 text-center">選択</th>
               <th className="p-3">案件名 / タイトル</th>

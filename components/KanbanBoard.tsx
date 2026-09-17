@@ -135,8 +135,8 @@ export default function KanbanBoard({
               </div>
             </div>
 
-            {/* 案件カードリスト */}
-            <div className="flex flex-1 flex-col gap-2.5 p-2.5">
+            {/* 案件カードリスト（このカラム内だけでスクロールし、ページ全体はスクロールしない） */}
+            <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto p-2.5" style={{ maxHeight: 'calc(100vh - 280px)' }}>
               {columnProjects.length === 0 ? (
                 <p className={`rounded-md border border-dashed py-6 text-center text-xs font-medium ${isLight ? 'border-slate-300 text-slate-400' : 'border-neutral-800 text-neutral-400'}`}>
                   案件なし
