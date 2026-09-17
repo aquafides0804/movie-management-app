@@ -1,7 +1,8 @@
 import { ProjectStatus, LinkType } from '@/app/types';
 import { HardDrive, MessageSquareText, Upload, Video } from 'lucide-react';
 
-export const DIRECTOR_PASSWORD = '0531';
+// ディレクター用パスワードは環境変数 NEXT_PUBLIC_DIRECTOR_PASSWORD で管理します
+// （.env.local や Vercel の Environment Variables に設定してください）
 
 export const STATUS_ORDER: ProjectStatus[] = [
   'not_started',

@@ -11,7 +11,7 @@ import {
   EditorWorkload,
   ClientProgress,
 } from '@/app/types';
-import { DIRECTOR_PASSWORD, STATUS_CONFIG } from '@/app/constants';
+import { STATUS_CONFIG } from '@/app/constants';
 import {
   mapDbToProject,
   mapProjectToDb,
@@ -246,7 +246,14 @@ export default function VideoProgressApp() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputPassword === DIRECTOR_PASSWORD) {
+    const correctPassword = process.env.NEXT_PUBLIC_DIRECTOR_PASSWORD;
+
+    if (!correctPassword) {
+      setPasswordError('パスワードが設定されていません（環境変数 NEXT_PUBLIC_DIRECTOR_PASSWORD が未設定です）');
+      return;
+    }
+
+    if (inputPassword === correctPassword) {
       setIsDirectorUnlocked(true);
       setViewMode('director');
       setShowPasswordModal(false);
