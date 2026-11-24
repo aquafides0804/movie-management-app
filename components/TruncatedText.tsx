@@ -3,22 +3,17 @@
 import { useRef, useState } from 'react';
 
 /**
- * 長いテキストを省略表示し、省略されているときだけ
+ * 長いテキストを1行で「…」省略表示し、省略されているときだけ
  * カーソルを当てると全文を吹き出しで表示するコンポーネント。
- *
- * lines = 1 : 1行で「…」省略（案1）
- * lines = 2 : 2行まで折り返して、それ以上は「…」省略（案2）
  */
 export default function TruncatedText({
   text,
-  lines,
   as = 'p',
   className = '',
   isLight,
   onClick,
 }: {
   text: string;
-  lines: 1 | 2;
   as?: 'p' | 'h3';
   className?: string;
   isLight: boolean;
@@ -31,14 +26,12 @@ export default function TruncatedText({
   const handleMouseEnter = () => {
     const el = textRef.current;
     if (!el) return;
-    const isTruncated = el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1;
-    setShowTooltip(isTruncated);
+    setShowTooltip(el.scrollWidth > el.clientWidth + 1);
   };
 
   const handleMouseLeave = () => setShowTooltip(false);
 
-  const clampClass = lines === 1 ? 'truncate' : 'line-clamp-2 [overflow-wrap:anywhere]';
-  const textClass = `${clampClass} ${className}`;
+  const textClass = `truncate ${className}`;
 
   const tooltipStyle = isLight
     ? 'bg-slate-900 text-white'
