@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Project, ProjectStatus } from '@/app/types';
 import { STATUS_CONFIG, STATUS_ORDER, LINK_CONFIG } from '@/app/constants';
+import TruncatedText from '@/components/TruncatedText';
 import { getDueBadge, projectHasAlert, isGigafileExpiring } from '@/app/utils';
 import {
   AlertTriangle,
@@ -85,8 +86,18 @@ export default function ProjectCard({
             className="mt-0.5 h-4 w-4 rounded border-slate-300 bg-white text-amber-600 focus:ring-amber-500 cursor-pointer"
           />
           <div className="min-w-0">
-            <p className={`truncate text-xs font-bold ${textClient}`}>{project.clientName}</p>
-            <h3 className={`truncate text-sm font-bold cursor-pointer ${textTitle}`} onClick={() => onEdit(project)}>{project.title}</h3>
+            <TruncatedText
+              text={project.clientName}
+              className={`text-xs font-bold ${textClient}`}
+              isLight={isLight}
+            />
+            <TruncatedText
+              as="h3"
+              text={project.title}
+              className={`text-sm font-bold cursor-pointer ${textTitle}`}
+              isLight={isLight}
+              onClick={() => onEdit(project)}
+            />
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
